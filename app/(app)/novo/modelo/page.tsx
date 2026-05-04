@@ -1,7 +1,7 @@
 import Icon from "@/components/ui/Icon";
 import TemplateGrid from "@/components/ui/TemplateGrid";
 import Link from "next/link";
-import { getTemplates } from "@/lib/data";
+import { getTemplates } from "@/lib/data.server";
 
 export default async function FlowModelo() {
   const templates = await getTemplates();

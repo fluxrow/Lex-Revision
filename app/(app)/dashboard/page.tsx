@@ -1,5 +1,6 @@
 import Icon from "@/components/ui/Icon";
-import { getContracts, STATUS_LABELS, fmtBRL, fmtDate } from "@/lib/data";
+import { STATUS_LABELS, fmtBRL, fmtDate } from "@/lib/data";
+import { getContracts } from "@/lib/data.server";
 import Link from "next/link";
 
 export default async function Dashboard() {

@@ -60,38 +60,11 @@ export const fmtDate = (d: string) => {
   return `${day}/${m}/${y.slice(2)}`;
 };
 
-async function getDataClient() {
-  if (typeof window === "undefined") {
-    const serverModule = await import("./supabase/server");
-    return serverModule.createClient();
-  }
-
-  const clientModule = await import("./supabase/client");
-  return clientModule.createClient();
-}
-
-export async function getContracts() {
-  try {
-    const supabase = await getDataClient();
-    const { data, error } = await supabase.from('contracts').select('*, clients(name)').order('created_at', { ascending: false });
-    if (error || !data || data.length === 0) return MOCK_CONTRACTS;
-    return data.map((c: any) => ({
-      id: c.id,
-      name: c.name,
-      client: c.clients?.name || 'Cliente',
-      value: (c.value_cents || 0) / 100,
-      status: c.status === 'draft' ? 'rascunho' : c.status === 'signed' ? 'assinado' : 'aguardando',
-      updated: c.updated_at.split('T')[0],
-      type: c.contract_type || 'Geral'
-    }));
-  } catch {
-    return MOCK_CONTRACTS;
-  }
-}
+import { createClient } from './supabase/client';
 
 export async function getClients() {
   try {
-    const supabase = await getDataClient();
+    const supabase = createClient();
     const { data, error } = await supabase.from('clients').select('*, contracts(id)').order('created_at', { ascending: false });
     if (error || !data || data.length === 0) return MOCK_CLIENTS;
     return data.map((c: any) => ({
@@ -105,24 +78,5 @@ export async function getClients() {
     }));
   } catch {
     return MOCK_CLIENTS;
-  }
-}
-
-export async function getTemplates() {
-  try {
-    const supabase = await getDataClient();
-    const { data, error } = await supabase.from('contract_templates').select('*').order('created_at', { ascending: false });
-    if (error || !data || data.length === 0) return MOCK_TEMPLATES;
-    return data.map((t: any) => ({
-      id: t.id,
-      name: t.name,
-      cat: t.category || 'Geral',
-      uses: t.uses_count || 0,
-      updated: t.updated_at.split('T')[0],
-      vars: t.variables ? t.variables.length : 0,
-      accent: '#8FA3F5'
-    }));
-  } catch {
-    return MOCK_TEMPLATES;
   }
 }
