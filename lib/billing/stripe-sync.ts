@@ -51,8 +51,8 @@ export async function getCheckoutSessionDetails(sessionId: string): Promise<Chec
       : null;
 
   const customerName =
-    typeof session.customer !== "string"
-      ? session.customer?.name ?? session.customer_details?.name ?? null
+    typeof session.customer !== "string" && session.customer && !("deleted" in session.customer)
+      ? session.customer.name ?? session.customer_details?.name ?? null
       : session.customer_details?.name ?? null;
 
   return {
