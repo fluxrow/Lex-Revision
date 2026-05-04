@@ -23,6 +23,26 @@ import Anthropic from '@anthropic-ai/sdk'
 export const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
 ```
 
+## Camada juridica local
+
+Antes de chamar o modelo, o Lex deve enriquecer o documento com uma camada propria de analise:
+
+- tipo contratual inferido
+- cobertura de clausulas obrigatorias e recomendadas
+- pontos de risco detectados por heuristica
+- contexto juridico interno do Lex
+
+Arquivos-base dessa camada:
+
+- `lib/legal/knowledge-base.ts`
+- `lib/legal/analysis.ts`
+
+Isso permite:
+
+- fallback local mesmo sem chave da Anthropic
+- respostas mais consistentes e auditaveis
+- integracao futura com Docling sem redesenhar o pipeline
+
 ## System prompt (compartilhado)
 
 ```

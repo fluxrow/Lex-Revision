@@ -36,7 +36,11 @@ yarn-error.log*
 
 # vercel
 .vercel
+vercel_deploy_final_log.txt
 vercel_deploy_log.txt
+supabase_status.txt
+supabase/.branches
+supabase/.temp
 
 # typescript
 *.tsbuildinfo

@@ -1,11 +1,11 @@
 import Icon from "@/components/ui/Icon";
-import { MOCK_TEMPLATES, fmtDate } from "@/lib/data";
+import { fmtDate } from "@/lib/data";
 import Link from "next/link";
 
-export default function TemplateGrid({ basePath }: { basePath: string }) {
+export default function TemplateGrid({ basePath, templates }: { basePath: string, templates: any[] }) {
   return (
     <div className="grid grid-3">
-      {MOCK_TEMPLATES.map(t => (
+      {templates.map(t => (
         <Link key={t.id} href={`${basePath}?template=${t.id}`} className="card card-hover"
           style={{padding: 20, display: 'flex', flexDirection: 'column', gap: 12, textDecoration:'none', color:'inherit'}}>
           <div style={{

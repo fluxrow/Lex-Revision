@@ -66,9 +66,17 @@ import { createClient } from './supabase/client';
 export async function getContracts() {
   try {
     const supabase = createClient();
-    const { data, error } = await supabase.from('contracts').select('*').order('created_at', { ascending: false });
+    const { data, error } = await supabase.from('contracts').select('*, clients(name)').order('created_at', { ascending: false });
     if (error || !data || data.length === 0) return MOCK_CONTRACTS;
-    return data;
+    return data.map((c: any) => ({
+      id: c.id,
+      name: c.name,
+      client: c.clients?.name || 'Cliente',
+      value: (c.value_cents || 0) / 100,
+      status: c.status === 'draft' ? 'rascunho' : c.status === 'signed' ? 'assinado' : 'aguardando',
+      updated: c.updated_at.split('T')[0],
+      type: c.contract_type || 'Geral'
+    }));
   } catch {
     return MOCK_CONTRACTS;
   }
@@ -77,9 +85,17 @@ export async function getContracts() {
 export async function getClients() {
   try {
     const supabase = createClient();
-    const { data, error } = await supabase.from('clients').select('*').order('created_at', { ascending: false });
+    const { data, error } = await supabase.from('clients').select('*, contracts(id)').order('created_at', { ascending: false });
     if (error || !data || data.length === 0) return MOCK_CLIENTS;
-    return data;
+    return data.map((c: any) => ({
+      id: c.id,
+      name: c.name,
+      type: c.type || 'PF',
+      doc: c.document || '—',
+      email: c.email || '—',
+      contracts: c.contracts ? c.contracts.length : 0,
+      since: c.created_at.substring(0, 7) // YYYY-MM
+    }));
   } catch {
     return MOCK_CLIENTS;
   }
@@ -88,9 +104,17 @@ export async function getClients() {
 export async function getTemplates() {
   try {
     const supabase = createClient();
-    const { data, error } = await supabase.from('templates').select('*').order('created_at', { ascending: false });
+    const { data, error } = await supabase.from('contract_templates').select('*').order('created_at', { ascending: false });
     if (error || !data || data.length === 0) return MOCK_TEMPLATES;
-    return data;
+    return data.map((t: any) => ({
+      id: t.id,
+      name: t.name,
+      cat: t.category || 'Geral',
+      uses: t.uses_count || 0,
+      updated: t.updated_at.split('T')[0],
+      vars: t.variables ? t.variables.length : 0,
+      accent: '#8FA3F5'
+    }));
   } catch {
     return MOCK_TEMPLATES;
   }

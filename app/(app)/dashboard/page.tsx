@@ -1,8 +1,10 @@
 import Icon from "@/components/ui/Icon";
-import { MOCK_CONTRACTS, STATUS_LABELS, fmtBRL, fmtDate } from "@/lib/data";
+import { getContracts, STATUS_LABELS, fmtBRL, fmtDate } from "@/lib/data";
 import Link from "next/link";
 
-export default function Dashboard() {
+export default async function Dashboard() {
+  const contracts = await getContracts();
+  
   return (
     <>
       <div className="page-head">
@@ -19,8 +21,8 @@ export default function Dashboard() {
       {/* KPI cards */}
       <div className="grid grid-4" style={{marginBottom: 24}}>
         {[
-          { label: 'Contratos este mês', value: '24', delta: '+18%', icon: 'file', good: true },
-          { label: 'Aguardando assinatura', value: '3', delta: '2 vencem hoje', icon: 'clock', warn: true },
+          { label: 'Contratos este mês', value: contracts.length.toString(), delta: '+18%', icon: 'file', good: true },
+          { label: 'Aguardando assinatura', value: contracts.filter(c => c.status === 'aguardando').length.toString(), delta: '2 vencem hoje', icon: 'clock', warn: true },
           { label: 'Tempo médio', value: '2min', delta: '−84% vs manual', icon: 'bolt', good: true },
           { label: 'Clientes ativos', value: '127', delta: '+4 esta semana', icon: 'users', good: true },
         ].map((k, i) => (
@@ -58,7 +60,7 @@ export default function Dashboard() {
           </div>
           <table className="table">
             <tbody>
-              {MOCK_CONTRACTS.slice(0, 5).map(c => (
+              {contracts.slice(0, 5).map(c => (
                 <tr key={c.id}>
                   <td style={{width:'50%'}}>
                     <div style={{fontWeight: 600}}>{c.name}</div>

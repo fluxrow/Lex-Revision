@@ -1,18 +1,26 @@
 "use client";
 
 import Icon from "@/components/ui/Icon";
-import { MOCK_CLIENTS } from "@/lib/data";
-import { useState } from "react";
+import { getClients, MOCK_CLIENTS } from "@/lib/data";
+import { useState, useEffect } from "react";
 
 export default function ClientesPage() {
+  const [clients, setClients] = useState<any[]>(MOCK_CLIENTS);
   const [selected, setSelected] = useState(MOCK_CLIENTS[0]);
+
+  useEffect(() => {
+    getClients().then(data => {
+      setClients(data);
+      if (data.length > 0) setSelected(data[0]);
+    });
+  }, []);
 
   return (
     <>
       <div className="page-head">
         <div>
           <h1>Clientes</h1>
-          <div className="page-sub">{MOCK_CLIENTS.length} clientes ativos</div>
+          <div className="page-sub">{clients.length} clientes ativos</div>
         </div>
         <div className="actions">
           <button className="btn btn-primary"><Icon name="plus" size={14}/>Novo cliente</button>
@@ -25,13 +33,13 @@ export default function ClientesPage() {
               <tr><th>Cliente</th><th>Tipo</th><th>Contratos</th></tr>
             </thead>
             <tbody>
-              {MOCK_CLIENTS.map(c => (
+              {clients.map(c => (
                 <tr key={c.id} onClick={() => setSelected(c)}
                   style={{background: selected.id === c.id ? 'var(--surface-2)':undefined, cursor: 'pointer'}}>
                   <td>
                     <div className="row" style={{gap:10}}>
                       <div className="avatar sm" style={{background: c.type==='PJ' ? 'var(--amber)':undefined}}>
-                        {c.name.split(' ').map(w=>w[0]).slice(0,2).join('')}
+                        {c.name.split(' ').map((w: string) => w[0]).slice(0,2).join('')}
                       </div>
                       <div>
                         <div style={{fontWeight:600}}>{c.name}</div>
@@ -49,7 +57,7 @@ export default function ClientesPage() {
 
         <div className="card" style={{position:'sticky', top: 20}}>
           <div className="row" style={{gap: 14, marginBottom: 18}}>
-            <div className="avatar xl">{selected.name.split(' ').map(w=>w[0]).slice(0,2).join('')}</div>
+            <div className="avatar xl">{selected.name.split(' ').map((w: string) => w[0]).slice(0,2).join('')}</div>
             <div>
               <div style={{fontSize: 18, fontWeight: 700, letterSpacing:'-0.01em'}}>{selected.name}</div>
               <div className="muted mono" style={{fontSize: 12, marginTop: 2}}>{selected.doc}</div>

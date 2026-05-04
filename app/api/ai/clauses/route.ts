@@ -1,31 +1,71 @@
-import Anthropic from '@anthropic-ai/sdk';
-import { NextResponse } from 'next/server';
+import { extractTextContent, parseJsonFromText } from "@/lib/ai/json";
+import { getAnthropicClient } from "@/lib/ai/client";
+import {
+  analyzeContractDocument,
+  buildClauseSuggestionsFallback,
+  buildKnowledgeBaseContext,
+} from "@/lib/legal/analysis";
+import { NextResponse } from "next/server";
+import { z } from "zod";
+
+const clausesSchema = z.object({
+  documentContent: z.string().min(30),
+  contractTypeHint: z.string().optional(),
+});
 
 export async function POST(request: Request) {
   try {
-    const { documentContent } = await request.json();
-    
-    if (!process.env.ANTHROPIC_API_KEY) {
-      return NextResponse.json({ error: "Anthropic API key is not configured" }, { status: 500 });
-    }
+    const payload = clausesSchema.parse(await request.json());
+    const analysis = analyzeContractDocument(
+      payload.documentContent,
+      payload.contractTypeHint
+    );
+    const fallback = buildClauseSuggestionsFallback(analysis);
+    const anthropic = getAnthropicClient();
 
-    const anthropic = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
-    });
+    if (!anthropic) {
+      return NextResponse.json({
+        status: "claused",
+        provider: "heuristic",
+        analysis,
+        ...fallback,
+        content: JSON.stringify(fallback, null, 2),
+      });
+    }
 
     const msg = await anthropic.messages.create({
       model: "claude-3-5-sonnet-20241022",
-      max_tokens: 1024,
-      system: "You are an expert legal assistant. Extract all key clauses from the provided document and summarize their intent.",
+      max_tokens: 1600,
+      system: [
+        "Voce trabalha dentro do Lex Revision e precisa mapear clausulas importantes com base em uma taxonomia juridica.",
+        "Responda somente JSON valido no formato:",
+        '{"clauseCoverage":[{"id":"...","title":"...","status":"present|missing_required|missing_recommended","importance":"required|recommended","riskIfMissing":"low|medium|high","guidance":"...","sampleText":"..."}],"suggestedClauses":[{"id":"...","title":"...","priority":"low|medium|high","motivo":"...","text":"..."}]}',
+        buildKnowledgeBaseContext(analysis),
+      ].join("\n\n"),
       messages: [
-        { role: "user", content: documentContent || "Analyze clauses in this document." }
+        {
+          role: "user",
+          content: `Mapeie as clausulas do contrato abaixo e sugira redacoes para o que estiver faltando.\n\nCONTRATO:\n${payload.documentContent}`,
+        },
       ],
     });
 
-    const content = msg.content[0].type === 'text' ? msg.content[0].text : "";
-    return NextResponse.json({ content, status: 'claused' });
+    const rawContent = extractTextContent(msg.content);
+    const parsed = parseJsonFromText<typeof fallback>(rawContent);
+
+    return NextResponse.json({
+      status: "claused",
+      provider: "anthropic",
+      analysis,
+      clauseCoverage: parsed?.clauseCoverage ?? fallback.clauseCoverage,
+      suggestedClauses: parsed?.suggestedClauses ?? fallback.suggestedClauses,
+      content: rawContent,
+    });
   } catch (error: any) {
     console.error("AI Clauses Error:", error);
-    return NextResponse.json({ error: error.message || "Failed to analyze clauses" }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || "Failed to analyze clauses" },
+      { status: 500 }
+    );
   }
 }

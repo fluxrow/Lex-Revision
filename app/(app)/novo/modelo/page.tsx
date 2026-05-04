@@ -1,14 +1,17 @@
 import Icon from "@/components/ui/Icon";
 import TemplateGrid from "@/components/ui/TemplateGrid";
 import Link from "next/link";
+import { getTemplates } from "@/lib/data";
 
-export default function FlowModelo() {
+export default async function FlowModelo() {
+  const templates = await getTemplates();
+  
   return (
     <>
       <div className="page-head">
         <div>
           <h1>Escolha um modelo</h1>
-          <div className="page-sub">8 modelos prontos para usar</div>
+          <div className="page-sub">{templates.length} modelos prontos para usar</div>
         </div>
         <div className="actions">
           <Link href="/novo" className="btn btn-ghost" style={{textDecoration:'none'}}>
@@ -16,7 +19,7 @@ export default function FlowModelo() {
           </Link>
         </div>
       </div>
-      <TemplateGrid basePath="/novo/upload" />
+      <TemplateGrid basePath="/novo/upload" templates={templates} />
     </>
   );
 }

@@ -2,11 +2,22 @@
 
 import Icon from "@/components/ui/Icon";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 
 export default function SignupPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignupPageInner />
+    </Suspense>
+  );
+}
+
+function SignupPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const checkoutSuccess = searchParams.get("checkout") === "success";
+  const selectedPlan = searchParams.get("plan");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -55,12 +66,20 @@ export default function SignupPage() {
           Entrar
         </Link>
         <Link href="/signup" style={{ flex: 1, textAlign: 'center', padding: '9px 12px', borderRadius: 7, fontSize: 13, fontWeight: 600, cursor: 'pointer', background: 'var(--surface)', color: 'var(--text)', boxShadow: 'var(--shadow-sm)', textDecoration: 'none' }}>
-          Criar conta
+          Ativar acesso
         </Link>
       </div>
 
-      <h2 style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.02em', margin: '0 0 6px' }}>Crie sua conta grátis</h2>
-      <p className="muted" style={{ margin: '0 0 28px', fontSize: 14 }}>14 dias grátis · Sem cartão de crédito</p>
+      {checkoutSuccess && (
+        <div style={{ color: 'var(--green)', fontSize: 13, marginBottom: 18, padding: '10px 12px', background: 'var(--green-soft)', borderRadius: 8, border: '1px solid var(--border)' }}>
+          Checkout iniciado com sucesso{selectedPlan ? ` para o plano ${selectedPlan}` : ""}. Agora crie seu acesso para entrar na plataforma.
+        </div>
+      )}
+
+      <h2 style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.02em', margin: '0 0 6px' }}>Ative seu acesso</h2>
+      <p className="muted" style={{ margin: '0 0 28px', fontSize: 14 }}>
+        Se você ainda não contratou um plano, volte para a <Link href="/#precos" style={{color:'var(--accent)', fontWeight: 600}}>LP e escolha um pacote</Link>.
+      </p>
 
       <form onSubmit={handleSubmit}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -92,7 +111,7 @@ export default function SignupPage() {
         )}
         <button type="submit" className="btn btn-primary btn-lg" style={{ width: '100%', marginTop: 8 }} disabled={loading}>
           {loading ? 'Criando...' : (
-            <>Criar conta grátis <Icon name="arrow-right" size={16}/></>
+            <>Criar acesso <Icon name="arrow-right" size={16}/></>
           )}
         </button>
       </form>

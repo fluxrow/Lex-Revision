@@ -63,6 +63,9 @@ export function Sidebar() {
           </div>
           <Icon name="chevron-right" size={14} style={{color:'var(--text-dim)'}}/>
         </Link>
+        <Link href="/login" className="btn btn-secondary btn-sm" style={{ width: "100%", marginTop: 10, textDecoration: "none" }}>
+          <Icon name="logout" size={12}/>Sair
+        </Link>
       </div>
     </aside>
   );

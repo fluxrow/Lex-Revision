@@ -1,31 +1,72 @@
-import Anthropic from '@anthropic-ai/sdk';
-import { NextResponse } from 'next/server';
+import { extractTextContent, parseJsonFromText } from "@/lib/ai/json";
+import { getAnthropicClient } from "@/lib/ai/client";
+import {
+  analyzeContractDocument,
+  buildKnowledgeBaseContext,
+  buildReviewFallback,
+} from "@/lib/legal/analysis";
+import { NextResponse } from "next/server";
+import { z } from "zod";
+
+const reviewSchema = z.object({
+  documentContent: z.string().min(30),
+  contractTypeHint: z.string().optional(),
+});
 
 export async function POST(request: Request) {
   try {
-    const { documentContent } = await request.json();
-    
-    if (!process.env.ANTHROPIC_API_KEY) {
-      return NextResponse.json({ error: "Anthropic API key is not configured" }, { status: 500 });
-    }
+    const payload = reviewSchema.parse(await request.json());
+    const analysis = analyzeContractDocument(
+      payload.documentContent,
+      payload.contractTypeHint
+    );
+    const fallback = buildReviewFallback(analysis);
+    const anthropic = getAnthropicClient();
 
-    const anthropic = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
-    });
+    if (!anthropic) {
+      return NextResponse.json({
+        status: "reviewed",
+        provider: "heuristic",
+        analysis,
+        review: fallback,
+        content: JSON.stringify(fallback, null, 2),
+      });
+    }
 
     const msg = await anthropic.messages.create({
       model: "claude-3-5-sonnet-20241022",
-      max_tokens: 1024,
-      system: "You are an expert legal assistant. Review the following legal document, identify risks, missing clauses, and suggest improvements.",
+      max_tokens: 1600,
+      system: [
+        "Voce e um revisor juridico do Lex Revision especializado em contratos brasileiros.",
+        "Analise risco contratual de forma estruturada, auditavel e objetiva.",
+        "Nunca invente jurisprudencia. Cite base legal apenas quando ela for realmente util ao risco apontado.",
+        "Responda somente JSON valido no formato:",
+        '{"executiveSummary":"...","overallRisk":"low|medium|high","findings":[{"title":"...","risk":"low|medium|high","trecho":"...","motivo":"...","sugestao":"...","legalBasis":"opcional"}],"nextActions":["..."]}',
+        buildKnowledgeBaseContext(analysis),
+      ].join("\n\n"),
       messages: [
-        { role: "user", content: documentContent || "Review this generic document." }
+        {
+          role: "user",
+          content: `Revise o contrato abaixo.\n\nCONTRATO:\n${payload.documentContent}`,
+        },
       ],
     });
 
-    const content = msg.content[0].type === 'text' ? msg.content[0].text : "";
-    return NextResponse.json({ content, status: 'reviewed' });
+    const rawContent = extractTextContent(msg.content);
+    const parsed = parseJsonFromText<typeof fallback>(rawContent);
+
+    return NextResponse.json({
+      status: "reviewed",
+      provider: "anthropic",
+      analysis,
+      review: parsed ?? fallback,
+      content: rawContent,
+    });
   } catch (error: any) {
     console.error("AI Review Error:", error);
-    return NextResponse.json({ error: error.message || "Failed to review text" }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || "Failed to review text" },
+      { status: 500 }
+    );
   }
 }

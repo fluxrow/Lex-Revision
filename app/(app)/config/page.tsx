@@ -1,6 +1,7 @@
 "use client";
 
 import Icon from "@/components/ui/Icon";
+import Link from "next/link";
 import { useState, useEffect } from "react";
 
 export default function ConfigPage() {
@@ -52,7 +53,12 @@ export default function ConfigPage() {
             <div className="field"><label className="field-label">Nome completo</label><input className="input" defaultValue="Marina Rocha"/></div>
             <div className="field"><label className="field-label">E-mail</label><input className="input" defaultValue="marina@silvaadv.com"/></div>
             <div className="field"><label className="field-label">OAB</label><input className="input" defaultValue="SP 123.456"/></div>
-            <button className="btn btn-primary">Salvar</button>
+            <div className="row" style={{ gap: 10, flexWrap: "wrap" }}>
+              <button className="btn btn-primary">Salvar</button>
+              <Link href="/login" className="btn btn-secondary" style={{ textDecoration: "none" }}>
+                <Icon name="logout" size={14}/>Sair para login
+              </Link>
+            </div>
           </div>
           <div className="card">
             <div className="card-title">Aparência</div>
@@ -86,7 +92,7 @@ export default function ConfigPage() {
                 <tr key={i}>
                   <td>
                     <div className="row" style={{gap:10}}>
-                      <div className="avatar sm">{n.split(' ').map(w=>w[0]).slice(0,2).join('')}</div>
+                      <div className="avatar sm">{n.split(' ').map((w: string) => w[0]).slice(0,2).join('')}</div>
                       <div><div style={{fontWeight:600}}>{n}</div><div className="muted" style={{fontSize:11}}>{e}</div></div>
                     </div>
                   </td>
