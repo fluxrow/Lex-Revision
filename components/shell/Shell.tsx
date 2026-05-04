@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import SignOutButton from '@/components/auth/SignOutButton';
 import Icon from '../ui/Icon';
 
 const NAV_PRIMARY = [
@@ -25,8 +26,20 @@ const MOBILE_NAV = [
   { id: '/config',    label: 'Mais',     icon: 'more' },
 ];
 
-export function Sidebar() {
+export function Sidebar({
+  userName = "Marina Rocha",
+  userEmail = "marina@silvaadv.com",
+}: {
+  userName?: string;
+  userEmail?: string;
+}) {
   const pathname = usePathname();
+  const initials = userName
+    .split(" ")
+    .map((word) => word[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
   
   return (
     <aside className="sidebar">
@@ -56,16 +69,16 @@ export function Sidebar() {
 
       <div className="sidebar-footer">
         <Link href="/config" className="user-card" style={{textDecoration: 'none'}}>
-          <div className="avatar">MR</div>
+          <div className="avatar">{initials || "LR"}</div>
           <div className="user-info">
-            <div className="user-name">Marina Rocha</div>
-            <div className="user-email">marina@silvaadv.com</div>
+            <div className="user-name">{userName}</div>
+            <div className="user-email">{userEmail}</div>
           </div>
           <Icon name="chevron-right" size={14} style={{color:'var(--text-dim)'}}/>
         </Link>
-        <Link href="/login" className="btn btn-secondary btn-sm" style={{ width: "100%", marginTop: 10, textDecoration: "none" }}>
-          <Icon name="logout" size={12}/>Sair
-        </Link>
+        <div style={{ marginTop: 10 }}>
+          <SignOutButton fullWidth />
+        </div>
       </div>
     </aside>
   );

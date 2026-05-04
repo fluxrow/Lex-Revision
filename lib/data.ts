@@ -60,12 +60,19 @@ export const fmtDate = (d: string) => {
   return `${day}/${m}/${y.slice(2)}`;
 };
 
-// Supabase fetching with mock fallback
-import { createClient } from './supabase/client';
+async function getDataClient() {
+  if (typeof window === "undefined") {
+    const serverModule = await import("./supabase/server");
+    return serverModule.createClient();
+  }
+
+  const clientModule = await import("./supabase/client");
+  return clientModule.createClient();
+}
 
 export async function getContracts() {
   try {
-    const supabase = createClient();
+    const supabase = await getDataClient();
     const { data, error } = await supabase.from('contracts').select('*, clients(name)').order('created_at', { ascending: false });
     if (error || !data || data.length === 0) return MOCK_CONTRACTS;
     return data.map((c: any) => ({
@@ -84,7 +91,7 @@ export async function getContracts() {
 
 export async function getClients() {
   try {
-    const supabase = createClient();
+    const supabase = await getDataClient();
     const { data, error } = await supabase.from('clients').select('*, contracts(id)').order('created_at', { ascending: false });
     if (error || !data || data.length === 0) return MOCK_CLIENTS;
     return data.map((c: any) => ({
@@ -103,7 +110,7 @@ export async function getClients() {
 
 export async function getTemplates() {
   try {
-    const supabase = createClient();
+    const supabase = await getDataClient();
     const { data, error } = await supabase.from('contract_templates').select('*').order('created_at', { ascending: false });
     if (error || !data || data.length === 0) return MOCK_TEMPLATES;
     return data.map((t: any) => ({

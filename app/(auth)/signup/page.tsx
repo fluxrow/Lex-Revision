@@ -18,6 +18,8 @@ function SignupPageInner() {
   const searchParams = useSearchParams();
   const checkoutSuccess = searchParams.get("checkout") === "success";
   const selectedPlan = searchParams.get("plan");
+  const sessionId = searchParams.get("session_id");
+  const activationRequired = searchParams.get("activation") === "required";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,25 +35,47 @@ function SignupPageInner() {
     setError(null);
 
     try {
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-      const { error, data } = await supabase.auth.signUp({
-        email,
-        password: password || "temp-password-123", // since we don't have password field yet, using temp or we need to add a password field
-        options: {
-          data: {
-            first_name: firstName,
-            last_name: lastName,
-            company,
-          }
-        }
+      if (!sessionId) {
+        throw new Error("Finalize o checkout da LP antes de ativar seu acesso.");
+      }
+
+      const activationResponse = await fetch("/api/auth/activate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          sessionId,
+          email,
+          password,
+          firstName,
+          lastName,
+          company,
+        }),
       });
 
-      if (error) {
-        setError(error.message);
-      } else {
-        router.push("/dashboard");
+      const activationPayload = await activationResponse.json();
+      if (!activationResponse.ok) {
+        if (activationPayload.redirectTo) {
+          router.replace(activationPayload.redirectTo);
+          return;
+        }
+
+        throw new Error(activationPayload.error || "Nao foi possivel ativar o acesso.");
       }
+
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (signInError) {
+        throw new Error(signInError.message);
+      }
+
+      router.replace("/dashboard");
     } catch (err: any) {
       setError(err.message || "Failed to connect to Supabase");
     } finally {
@@ -73,6 +97,12 @@ function SignupPageInner() {
       {checkoutSuccess && (
         <div style={{ color: 'var(--green)', fontSize: 13, marginBottom: 18, padding: '10px 12px', background: 'var(--green-soft)', borderRadius: 8, border: '1px solid var(--border)' }}>
           Checkout iniciado com sucesso{selectedPlan ? ` para o plano ${selectedPlan}` : ""}. Agora crie seu acesso para entrar na plataforma.
+        </div>
+      )}
+
+      {activationRequired && !checkoutSuccess && (
+        <div style={{ color: 'var(--amber)', fontSize: 13, marginBottom: 18, padding: '10px 12px', background: 'var(--amber-soft)', borderRadius: 8, border: '1px solid var(--border)' }}>
+          Sua conta ainda nao foi ativada. Finalize um checkout valido na LP para liberar acesso.
         </div>
       )}
 
@@ -115,6 +145,12 @@ function SignupPageInner() {
           )}
         </button>
       </form>
+
+      {!sessionId && (
+        <p className="muted" style={{ textAlign: 'center', marginTop: 14, fontSize: 12.5 }}>
+          Esta tela depende de um checkout valido. Se ainda nao contratou, volte para a <Link href="/#precos" style={{color:'var(--accent)', fontWeight: 600}}>LP e escolha um plano</Link>.
+        </p>
+      )}
 
       <p className="dim" style={{ textAlign: 'center', marginTop: 16, fontSize: 11.5, lineHeight: 1.5 }}>
         Ao criar conta você concorda com os <a href="#" style={{color:'var(--text-muted)', textDecoration:'underline'}}>Termos</a> e <a href="#" style={{color:'var(--text-muted)', textDecoration:'underline'}}>Privacidade</a>.

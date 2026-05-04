@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
-import Stripe from "stripe";
 import { z } from "zod";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "sk_test_placeholder", {
-  apiVersion: "2026-04-22.dahlia" as any,
-});
+import { getPriceIdFromPlan, getPlanFromPriceId, normalizePlan } from "@/lib/billing/plans";
+import { stripe } from "@/lib/stripe";
 
 export async function POST(request: Request) {
   try {
@@ -18,7 +16,8 @@ export async function POST(request: Request) {
       })
       .parse(await request.json());
 
-    const priceId = payload.priceId ?? getPriceIdFromPlan(payload.plan);
+    const selectedPlan = payload.plan ?? getPlanFromPriceId(payload.priceId) ?? undefined;
+    const priceId = payload.priceId ?? getPriceIdFromPlan(selectedPlan);
     if (!priceId) {
       return NextResponse.json(
         {
@@ -32,6 +31,7 @@ export async function POST(request: Request) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const successPath = payload.successPath || "/signup?checkout=success";
     const cancelPath = payload.cancelPath || "/#precos";
+    const normalizedPlan = normalizePlan(selectedPlan) ?? "starter";
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
@@ -45,6 +45,17 @@ export async function POST(request: Request) {
       success_url: `${appUrl}${successPath}${successPath.includes("?") ? "&" : "?"}session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}${cancelPath}`,
       customer_email: payload.email,
+      metadata: {
+        plan: normalizedPlan,
+        price_id: priceId,
+        checkout_source: "lp",
+      },
+      subscription_data: {
+        metadata: {
+          plan: normalizedPlan,
+          checkout_source: "lp",
+        },
+      },
     });
 
     return NextResponse.json({ sessionId: session.id, url: session.url });
@@ -52,18 +63,4 @@ export async function POST(request: Request) {
     console.error("Stripe Checkout Error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-}
-
-function getPriceIdFromPlan(plan?: "starter" | "professional" | "firm") {
-  if (!plan) {
-    return null;
-  }
-
-  const priceMap = {
-    starter: process.env.STRIPE_PRICE_STARTER,
-    professional: process.env.STRIPE_PRICE_PROFESSIONAL,
-    firm: process.env.STRIPE_PRICE_FIRM,
-  };
-
-  return priceMap[plan] || null;
 }

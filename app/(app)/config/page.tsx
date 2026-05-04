@@ -1,8 +1,8 @@
 "use client";
 
 import Icon from "@/components/ui/Icon";
-import Link from "next/link";
 import { useState, useEffect } from "react";
+import SignOutButton from "@/components/auth/SignOutButton";
 
 export default function ConfigPage() {
   const [tab, setTab] = useState('perfil');
@@ -55,9 +55,7 @@ export default function ConfigPage() {
             <div className="field"><label className="field-label">OAB</label><input className="input" defaultValue="SP 123.456"/></div>
             <div className="row" style={{ gap: 10, flexWrap: "wrap" }}>
               <button className="btn btn-primary">Salvar</button>
-              <Link href="/login" className="btn btn-secondary" style={{ textDecoration: "none" }}>
-                <Icon name="logout" size={14}/>Sair para login
-              </Link>
+              <SignOutButton label="Sair para login" className="btn-secondary" />
             </div>
           </div>
           <div className="card">

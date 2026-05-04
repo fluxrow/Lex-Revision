@@ -18,6 +18,9 @@ create table organizations (
   plan            text not null default 'trial', -- trial | starter | professional | firm
   stripe_customer_id text,
   stripe_subscription_id text,
+  stripe_price_id text,
+  subscription_status text not null default 'inactive',
+  activated_at    timestamptz,
   trial_ends_at   timestamptz default (now() + interval '14 days'),
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now()

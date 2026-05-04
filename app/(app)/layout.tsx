@@ -1,32 +1,38 @@
 import { MobileNav, Sidebar, Topbar } from "@/components/shell/Shell";
-import Icon from "@/components/ui/Icon";
-import Link from "next/link";
+import SignOutButton from "@/components/auth/SignOutButton";
+import { getCurrentAccount } from "@/lib/auth/account";
 import { redirect } from "next/navigation";
 
-export default function AppLayout({
+export default async function AppLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Mock Auth
-  const session = { user: { id: 'demo', email: 'demo@lexrevision.com.br', org_id: 'demo-org' } };
-  
-  if (!session) {
-    redirect('/login');
+  const account = await getCurrentAccount();
+
+  if (!account.user) {
+    redirect("/login");
+  }
+
+  if (!account.membership || !account.organization) {
+    redirect("/signup?activation=required");
+  }
+
+  if (["inactive", "canceled", "unpaid", "incomplete_expired"].includes(account.organization.subscription_status || "inactive")) {
+    redirect("/login?billing=inactive");
   }
 
   return (
     <div className="app">
-      <Sidebar />
+      <Sidebar
+        userName={account.membership.full_name}
+        userEmail={account.user.email || ""}
+      />
       <div className="app-main">
         <Topbar
           title="Lex Revision"
           actions={
-            <>
-              <Link href="/login" className="btn btn-secondary btn-sm" style={{ textDecoration: "none" }}>
-                <Icon name="logout" size={13}/>Sair
-              </Link>
-            </>
+            <SignOutButton />
           }
         />
         <div className="app-content">
