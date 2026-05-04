@@ -54,10 +54,13 @@ export async function POST(request: Request) {
       case "invoice.payment_succeeded":
       case "invoice.payment_failed": {
         const invoice = event.data.object as Stripe.Invoice;
+        const invoiceSubscription = invoice.parent?.subscription_details?.subscription;
         const organization = await findOrganizationByStripeIds(
           supabaseAdmin,
           typeof invoice.customer === "string" ? invoice.customer : invoice.customer?.id ?? null,
-          typeof invoice.subscription === "string" ? invoice.subscription : invoice.subscription?.id ?? null
+          typeof invoiceSubscription === "string"
+            ? invoiceSubscription
+            : invoiceSubscription?.id ?? null
         );
 
         if (!organization) {
