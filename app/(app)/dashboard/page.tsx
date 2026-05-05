@@ -1,17 +1,23 @@
 import Icon from "@/components/ui/Icon";
+import { getCurrentAccount } from "@/lib/auth/account";
 import { STATUS_LABELS, fmtBRL, fmtDate } from "@/lib/data";
 import { getContracts } from "@/lib/data.server";
 import Link from "next/link";
 
 export default async function Dashboard() {
+  const account = await getCurrentAccount();
   const contracts = await getContracts();
+  const firstName = account.membership?.full_name?.split(" ")[0] || "Marina";
+  const planLabel = account.organization?.plan ? account.organization.plan.replace("_", " ") : "plano ativo";
   
   return (
     <>
       <div className="page-head">
         <div>
-          <h1>Bom dia, Marina</h1>
-          <div className="page-sub">Você tem 3 contratos aguardando assinatura e 1 sugestão da IA.</div>
+          <h1>Bom dia, {firstName}</h1>
+          <div className="page-sub">
+            {account.organization?.name || "Sua operação"} está em {planLabel}. Você tem {contracts.filter(c => c.status === 'aguardando').length} contratos aguardando assinatura.
+          </div>
         </div>
         <div className="actions">
           <button className="btn btn-secondary"><Icon name="upload" size={15}/>Importar</button>
@@ -94,6 +100,12 @@ export default async function Dashboard() {
             </div>
             <div className="muted" style={{fontSize: 13, lineHeight: 1.5, marginBottom: 14}}>
               Detectamos contratos de longa duração sem índice de reajuste. Posso sugerir cláusulas adequadas.
+            </div>
+            <div className="row" style={{gap: 8, marginBottom: 14, flexWrap: "wrap"}}>
+              <span className="chip chip-accent">Plano {account.organization?.plan || "ativo"}</span>
+              <span className={`chip ${account.organization?.subscription_status === "past_due" ? "chip-amber" : "chip-green"}`}>
+                {account.organization?.subscription_status || "active"}
+              </span>
             </div>
             <div className="row" style={{gap: 8}}>
               <button className="btn btn-primary btn-sm">Revisar</button>

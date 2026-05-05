@@ -28,7 +28,12 @@ export const getCurrentAccount = cache(async () => {
           id,
           name,
           plan,
-          subscription_status
+          subscription_status,
+          stripe_customer_id,
+          stripe_subscription_id,
+          stripe_price_id,
+          activated_at,
+          trial_ends_at
         )
       `
     )
