@@ -1,4 +1,7 @@
+import AccountStatusBanner from "@/components/account/AccountStatusBanner";
+import OnboardingChecklist from "@/components/account/OnboardingChecklist";
 import Icon from "@/components/ui/Icon";
+import { getAccountOverview } from "@/lib/account/overview";
 import { getCurrentAccount } from "@/lib/auth/account";
 import { STATUS_LABELS, fmtBRL, fmtDate } from "@/lib/data";
 import { getContracts } from "@/lib/data.server";
@@ -6,9 +9,11 @@ import Link from "next/link";
 
 export default async function Dashboard() {
   const account = await getCurrentAccount();
+  const overview = await getAccountOverview();
   const contracts = await getContracts();
   const firstName = account.membership?.full_name?.split(" ")[0] || "Marina";
   const planLabel = account.organization?.plan ? account.organization.plan.replace("_", " ") : "plano ativo";
+  const pendingSteps = overview?.onboardingSteps.filter((step) => !step.complete).slice(0, 3) ?? [];
   
   return (
     <>
@@ -31,7 +36,7 @@ export default async function Dashboard() {
           { label: 'Contratos este mês', value: contracts.length.toString(), delta: '+18%', icon: 'file', good: true },
           { label: 'Aguardando assinatura', value: contracts.filter(c => c.status === 'aguardando').length.toString(), delta: '2 vencem hoje', icon: 'clock', warn: true },
           { label: 'Tempo médio', value: '2min', delta: '−84% vs manual', icon: 'bolt', good: true },
-          { label: 'Clientes ativos', value: '127', delta: '+4 esta semana', icon: 'users', good: true },
+          { label: 'Clientes ativos', value: (overview?.clientCount ?? 0).toString(), delta: `${overview?.memberCount ?? 1} pessoa(s) no workspace`, icon: 'users', good: true },
         ].map((k, i) => (
           <div key={i} className="card">
             <div className="row sp-between" style={{marginBottom: 14}}>
@@ -51,6 +56,19 @@ export default async function Dashboard() {
           </div>
         ))}
       </div>
+
+      {overview ? (
+        <AccountStatusBanner
+          organizationName={overview.account.organization?.name || "Lex Revision"}
+          planLabel={overview.planLabel}
+          statusLabel={overview.statusLabel}
+          statusTone={overview.statusTone}
+          progressPercent={overview.progressPercent}
+          completedSteps={overview.completedSteps}
+          totalSteps={overview.onboardingSteps.length}
+          nextStep={overview.nextStep}
+        />
+      ) : null}
 
       {/* Main 2-col */}
       <div className="grid" style={{gridTemplateColumns: '1.6fr 1fr'}}>
@@ -138,6 +156,14 @@ export default async function Dashboard() {
               </Link>
             ))}
           </div>
+
+          {overview && pendingSteps.length > 0 ? (
+            <OnboardingChecklist
+              steps={pendingSteps}
+              title="Ajustes prioritários"
+              subtitle="Os próximos 3 movimentos mais úteis para o workspace."
+            />
+          ) : null}
         </div>
       </div>
     </>
