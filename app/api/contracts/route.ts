@@ -9,6 +9,9 @@ const createContractSchema = z.object({
   name: z.string().trim().min(3),
   contractType: z.string().trim().min(2),
   body: z.string().trim().min(30),
+  templateId: z.string().uuid().optional().nullable(),
+  variableValues: z.record(z.string(), z.string()).optional().default({}),
+  source: z.enum(["ai_generate", "template_fill", "upload_flow"]).optional().default("ai_generate"),
   appliedSuggestions: z
     .array(
       z.object({
@@ -40,6 +43,8 @@ export async function POST(request: Request) {
         name: payload.name,
         status: "draft",
         contract_type: payload.contractType,
+        template_id: payload.templateId ?? null,
+        variable_values: payload.variableValues,
         body_md: payload.body,
         ai_suggestions: payload.appliedSuggestions,
         created_by: account.user.id,
@@ -58,11 +63,27 @@ export async function POST(request: Request) {
       resource_type: "contract",
       resource_id: contract.id,
       metadata: {
-        source: "ai_generate",
+        source: payload.source,
         contract_type: payload.contractType,
+        template_id: payload.templateId ?? null,
         applied_suggestions: payload.appliedSuggestions.map((item) => item.id),
       },
     });
+
+    if (payload.templateId) {
+      const { data: template } = await supabase
+        .from("contract_templates")
+        .select("id, uses_count")
+        .eq("id", payload.templateId)
+        .maybeSingle();
+
+      if (template) {
+        await supabase
+          .from("contract_templates")
+          .update({ uses_count: (template.uses_count || 0) + 1 })
+          .eq("id", payload.templateId);
+      }
+    }
 
     return NextResponse.json({
       ok: true,

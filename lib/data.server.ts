@@ -61,3 +61,59 @@ export async function getTemplates() {
     return MOCK_TEMPLATES;
   }
 }
+
+export async function getTemplateById(templateId?: string | null) {
+  if (!templateId) {
+    return null;
+  }
+
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("contract_templates")
+      .select("*")
+      .eq("id", templateId)
+      .maybeSingle();
+
+    if (error || !data) {
+      const fallback = MOCK_TEMPLATES.find((template) => template.id === templateId);
+      return fallback
+        ? {
+            id: fallback.id,
+            name: fallback.name,
+            cat: fallback.cat,
+            uses: fallback.uses,
+            updated: fallback.updated,
+            vars: fallback.vars,
+            accent: fallback.accent,
+            variableDefinitions: [],
+          }
+        : null;
+    }
+
+    return {
+      id: data.id,
+      name: data.name,
+      cat: data.category || "Geral",
+      uses: data.uses_count || 0,
+      updated: data.updated_at.split("T")[0],
+      vars: data.variables ? data.variables.length : 0,
+      accent: "#8FA3F5",
+      variableDefinitions: Array.isArray(data.variables) ? data.variables : [],
+    };
+  } catch {
+    const fallback = MOCK_TEMPLATES.find((template) => template.id === templateId);
+    return fallback
+      ? {
+          id: fallback.id,
+          name: fallback.name,
+          cat: fallback.cat,
+          uses: fallback.uses,
+          updated: fallback.updated,
+          vars: fallback.vars,
+          accent: fallback.accent,
+          variableDefinitions: [],
+        }
+      : null;
+  }
+}
