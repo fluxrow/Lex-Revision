@@ -27,6 +27,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Sessao invalida." }, { status: 401 });
     }
 
+    if (account.isPreview) {
+      return NextResponse.json(
+        { error: "Preview admin em modo somente leitura. Configure o Supabase remoto para convidar equipe real." },
+        { status: 409 }
+      );
+    }
+
     if (!["owner", "admin"].includes(account.membership.role || "")) {
       return NextResponse.json({ error: "Apenas owner ou admin podem convidar a equipe." }, { status: 403 });
     }

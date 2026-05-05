@@ -3,6 +3,7 @@ import { PLAN_CATALOG, normalizePlan } from "@/lib/billing/plans";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hasAdminSupabaseEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
+import { MOCK_CONTRACTS } from "@/lib/data";
 
 export type OnboardingStep = {
   id: string;
@@ -29,6 +30,82 @@ export async function getAccountOverview() {
 
   if (!account.user || !account.membership || !account.organization) {
     return null;
+  }
+
+  if (account.isPreview || account.organization.previewMode) {
+    const onboardingSteps: OnboardingStep[] = [
+      {
+        id: "billing",
+        label: "Assinatura operacional",
+        description: "Preview ativo para validar a interface comercial antes do billing real.",
+        complete: true,
+      },
+      {
+        id: "profile",
+        label: "Responsável identificado",
+        description: `Perfil de preview carregado com OAB ${account.membership.oab_number}.`,
+        complete: true,
+      },
+      {
+        id: "clients",
+        label: "Base de clientes iniciada",
+        description: "Workspace de preview usando dados de demonstração controlados.",
+        complete: true,
+      },
+      {
+        id: "contracts",
+        label: "Fluxo de contratos iniciado",
+        description: `${MOCK_CONTRACTS.length} contratos de preview disponíveis para validar navegação.`,
+        complete: true,
+      },
+      {
+        id: "team",
+        label: "Equipe configurada",
+        description: "Equipe de preview carregada para testar gestão interna.",
+        complete: true,
+      },
+    ];
+
+    return {
+      account,
+      memberCount: 4,
+      clientCount: 12,
+      contractCount: MOCK_CONTRACTS.length,
+      completedSteps: onboardingSteps.length,
+      progressPercent: 100,
+      onboardingSteps,
+      plan: "professional",
+      planLabel: PLAN_CATALOG.professional.label,
+      planMeta: PLAN_CATALOG.professional,
+      subscriptionStatus: "active",
+      statusTone: "healthy" as const,
+      statusLabel: "Preview interno",
+      roleLabel: getRoleLabel(account.membership.role),
+      teamMembers: [
+        {
+          id: "preview-owner",
+          userId: "preview-user-admin",
+          fullName: "Admin Preview",
+          email: account.user.email || "admin@preview.lex",
+          role: "owner",
+          roleLabel: "Owner",
+          oabNumber: account.membership.oab_number ?? null,
+          createdAt: new Date("2026-05-05T12:00:00.000Z").toISOString(),
+        },
+        {
+          id: "preview-lawyer",
+          userId: "preview-user-lawyer",
+          fullName: "Marina Rocha",
+          email: "marina@silvaadv.com",
+          role: "lawyer",
+          roleLabel: "Advogado",
+          oabNumber: "OAB 12345-SP",
+          createdAt: new Date("2026-05-04T12:00:00.000Z").toISOString(),
+        },
+      ],
+      nextStep: null,
+      canManageBilling: false,
+    };
   }
 
   const supabase = await createClient();

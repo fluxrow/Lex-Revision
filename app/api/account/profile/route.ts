@@ -20,6 +20,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Sessao invalida." }, { status: 401 });
     }
 
+    if (account.isPreview) {
+      return NextResponse.json(
+        { error: "Preview admin em modo somente leitura. Ative o Supabase remoto para editar perfil real." },
+        { status: 409 }
+      );
+    }
+
     const supabase = await createClient();
     const { error: membershipError } = await supabase
       .from("memberships")

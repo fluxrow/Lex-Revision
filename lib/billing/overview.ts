@@ -15,6 +15,55 @@ type OrganizationLike = {
 };
 
 export async function getBillingOverview(organization: OrganizationLike) {
+  if ((organization as OrganizationLike & { previewMode?: boolean }).previewMode) {
+    const normalizedPlan = normalizePlan(organization.plan) ?? "professional";
+    const planMeta = PLAN_CATALOG[normalizedPlan];
+
+    return {
+      plan: normalizedPlan,
+      planMeta,
+      status: "active",
+      renewalDate: "15 mai. 2026",
+      monthlyPriceLabel: formatMoney(planMeta.monthlyPriceCents, "BRL"),
+      contractUsage: {
+        current: 18,
+        limitLabel: planMeta.contractLimitLabel,
+        percent: getPercent(18, parseLimit(planMeta.contractLimitLabel)),
+      },
+      signatureUsage: {
+        current: 42,
+        limitLabel: normalizedPlan === "starter" ? "50/mês" : normalizedPlan === "professional" ? "200/mês" : "Ilimitado",
+        percent: normalizedPlan === "firm" ? 0 : getPercent(42, normalizedPlan === "starter" ? 50 : 200),
+      },
+      clientUsage: {
+        current: 12,
+        limitLabel: "Base ativa",
+        percent: 0,
+      },
+      memberUsage: {
+        current: 4,
+        limitLabel: planMeta.userLimitLabel,
+        percent: getPercent(4, parseLimit(planMeta.userLimitLabel)),
+      },
+      invoices: [
+        {
+          id: "preview-invoice-1",
+          externalId: "INV-PREVIEW-001",
+          amountLabel: formatMoney(planMeta.monthlyPriceCents, "BRL"),
+          status: "paid",
+          dateLabel: "05 mai. 2026",
+          periodEnd: null,
+          pdfUrl: null,
+        },
+      ],
+      canManageBilling: false,
+      customerId: null,
+      subscriptionId: null,
+      activatedAt: organization.activated_at ?? null,
+      trialEndsAt: organization.trial_ends_at ?? null,
+    };
+  }
+
   const supabase = await createClient();
   const monthStart = new Date();
   monthStart.setDate(1);

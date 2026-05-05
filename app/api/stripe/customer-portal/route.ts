@@ -20,6 +20,13 @@ export async function POST(request: Request) {
       );
     }
 
+    if (account.isPreview) {
+      return NextResponse.json(
+        { error: "Preview admin em modo somente leitura. O portal de cobranca real exige Stripe e Supabase remotos." },
+        { status: 409 }
+      );
+    }
+
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const session = await stripe.billingPortal.sessions.create({
       customer: account.organization.stripe_customer_id,

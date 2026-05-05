@@ -40,6 +40,21 @@ export default async function AppLayout({
           }
         />
         <div className="app-content">
+          {account.isPreview ? (
+            <div
+              style={{
+                marginBottom: 16,
+                padding: "10px 12px",
+                borderRadius: 10,
+                border: "1px solid var(--border)",
+                background: "var(--amber-soft)",
+                color: "var(--amber)",
+                fontSize: 13,
+              }}
+            >
+              Admin preview ativo. Este acesso serve para validacao interna da interface e do fluxo; a operacao real ainda depende de um Supabase remoto configurado.
+            </div>
+          ) : null}
           {children}
         </div>
       </div>

@@ -44,6 +44,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Sessao invalida." }, { status: 401 });
     }
 
+    if (account.isPreview) {
+      return NextResponse.json(
+        { error: "Preview admin em modo somente leitura. Para salvar contratos reais, precisamos do Supabase remoto ativo." },
+        { status: 409 }
+      );
+    }
+
     const supabase = await createClient();
     const intelligence = await buildContractIntelligence({
       body: payload.body,

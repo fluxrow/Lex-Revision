@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { clearPreviewSession } from "@/lib/auth/preview";
 import { isSupabaseEnvError } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 
@@ -12,6 +13,8 @@ export async function POST() {
       throw error;
     }
   }
+
+  await clearPreviewSession();
 
   return NextResponse.json({ ok: true });
 }
