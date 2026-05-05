@@ -1,9 +1,26 @@
 import { cache } from "react";
 
+import { isSupabaseEnvError } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 
 export const getCurrentAccount = cache(async () => {
-  const supabase = await createClient();
+  let supabase;
+
+  try {
+    supabase = await createClient();
+  } catch (error) {
+    if (isSupabaseEnvError(error)) {
+      return {
+        user: null,
+        membership: null,
+        organization: null,
+        envMissing: true,
+      };
+    }
+
+    throw error;
+  }
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -13,6 +30,7 @@ export const getCurrentAccount = cache(async () => {
       user: null,
       membership: null,
       organization: null,
+      envMissing: false,
     };
   }
 
@@ -48,5 +66,6 @@ export const getCurrentAccount = cache(async () => {
     user,
     membership: membership ?? null,
     organization,
+    envMissing: false,
   };
 });

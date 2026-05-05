@@ -1,6 +1,10 @@
 "use client";
 
 import Icon from "@/components/ui/Icon";
+import {
+  getSupabaseProductionSetupMessage,
+  isSupabaseEnvError,
+} from "@/lib/supabase/env";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
@@ -18,6 +22,7 @@ function LoginPageInner() {
   const searchParams = useSearchParams();
   const signedOut = searchParams.get("signed_out") === "1";
   const billingInactive = searchParams.get("billing") === "inactive";
+  const supabaseSetupRequired = searchParams.get("setup") === "supabase";
   const initialEmail = searchParams.get("email") || "marina@silvaadv.com";
 
   const [email, setEmail] = useState(initialEmail);
@@ -45,7 +50,11 @@ function LoginPageInner() {
         router.push("/dashboard");
       }
     } catch (err: any) {
-      setError(err.message || "Failed to connect to Supabase");
+      setError(
+        isSupabaseEnvError(err)
+          ? getSupabaseProductionSetupMessage()
+          : err.message || "Falha ao conectar com a autenticacao."
+      );
     } finally {
       setLoading(false);
     }
@@ -74,6 +83,12 @@ function LoginPageInner() {
       {billingInactive && (
         <div style={{ color: 'var(--amber)', fontSize: 13, marginBottom: 18, padding: '10px 12px', background: 'var(--amber-soft)', borderRadius: 8, border: '1px solid var(--border)' }}>
           Sua assinatura nao esta ativa para este acesso. Se precisar, revise os planos na LP e reative o checkout.
+        </div>
+      )}
+
+      {supabaseSetupRequired && (
+        <div style={{ color: 'var(--amber)', fontSize: 13, marginBottom: 18, padding: '10px 12px', background: 'var(--amber-soft)', borderRadius: 8, border: '1px solid var(--border)' }}>
+          {getSupabaseProductionSetupMessage()}
         </div>
       )}
 

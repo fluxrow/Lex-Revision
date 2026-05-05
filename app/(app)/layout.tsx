@@ -10,6 +10,10 @@ export default async function AppLayout({
 }>) {
   const account = await getCurrentAccount();
 
+  if (account.envMissing) {
+    redirect("/login?setup=supabase");
+  }
+
   if (!account.user) {
     redirect("/login");
   }

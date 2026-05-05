@@ -1,5 +1,7 @@
 import { getCurrentAccount } from "@/lib/auth/account";
 import { PLAN_CATALOG, normalizePlan } from "@/lib/billing/plans";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { hasAdminSupabaseEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 
 export type OnboardingStep = {
@@ -10,6 +12,17 @@ export type OnboardingStep = {
 };
 
 export type AccountStatusTone = "healthy" | "warning" | "setup";
+
+export type TeamMemberSummary = {
+  id: string;
+  userId: string;
+  fullName: string;
+  email: string | null;
+  role: string;
+  roleLabel: string;
+  oabNumber: string | null;
+  createdAt: string | null;
+};
 
 export async function getAccountOverview() {
   const account = await getCurrentAccount();
@@ -37,6 +50,42 @@ export async function getAccountOverview() {
   const memberCount = memberCountResult.count ?? 0;
   const clientCount = clientCountResult.count ?? 0;
   const contractCount = contractCountResult.count ?? 0;
+  const { data: teamRows } = await supabase
+    .from("memberships")
+    .select("id, user_id, full_name, role, oab_number, created_at")
+    .eq("organization_id", account.organization.id)
+    .order("created_at", { ascending: true });
+
+  const emailByUserId = new Map<string, string>();
+
+  if (hasAdminSupabaseEnv()) {
+    const supabaseAdmin = createAdminClient();
+    const { data: usersData, error: usersError } = await supabaseAdmin.auth.admin.listUsers({
+      page: 1,
+      perPage: 500,
+    });
+
+    if (usersError) {
+      throw usersError;
+    }
+
+    for (const user of usersData.users) {
+      if (user.email) {
+        emailByUserId.set(user.id, user.email);
+      }
+    }
+  }
+
+  const teamMembers: TeamMemberSummary[] = (teamRows ?? []).map((member) => ({
+    id: member.id,
+    userId: member.user_id,
+    fullName: member.full_name,
+    email: emailByUserId.get(member.user_id) ?? null,
+    role: member.role,
+    roleLabel: getRoleLabel(member.role),
+    oabNumber: member.oab_number ?? null,
+    createdAt: member.created_at ?? null,
+  }));
   const normalizedPlan = normalizePlan(account.organization.plan) ?? "starter";
   const planMeta = PLAN_CATALOG[normalizedPlan];
   const subscriptionStatus = account.organization.subscription_status ?? "inactive";
@@ -109,6 +158,7 @@ export async function getAccountOverview() {
     statusTone: getStatusTone(subscriptionStatus, progressPercent),
     statusLabel: getStatusLabel(subscriptionStatus),
     roleLabel: getRoleLabel(account.membership.role),
+    teamMembers,
     nextStep: onboardingSteps.find((step) => !step.complete) ?? null,
     canManageBilling,
   };
@@ -139,7 +189,7 @@ function getStatusLabel(subscriptionStatus: string) {
   }
 }
 
-function getRoleLabel(role?: string | null) {
+export function getRoleLabel(role?: string | null) {
   switch (role) {
     case "owner":
       return "Owner";

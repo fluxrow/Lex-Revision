@@ -1,6 +1,10 @@
 "use client";
 
 import Icon from "@/components/ui/Icon";
+import {
+  getSupabaseProductionSetupMessage,
+  isSupabaseEnvError,
+} from "@/lib/supabase/env";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
@@ -20,6 +24,7 @@ function SignupPageInner() {
   const selectedPlan = searchParams.get("plan");
   const sessionId = searchParams.get("session_id");
   const activationRequired = searchParams.get("activation") === "required";
+  const supabaseSetupRequired = searchParams.get("setup") === "supabase";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -77,7 +82,11 @@ function SignupPageInner() {
 
       router.replace("/dashboard");
     } catch (err: any) {
-      setError(err.message || "Failed to connect to Supabase");
+      setError(
+        isSupabaseEnvError(err)
+          ? getSupabaseProductionSetupMessage()
+          : err.message || "Falha ao conectar com a autenticacao."
+      );
     } finally {
       setLoading(false);
     }
@@ -103,6 +112,12 @@ function SignupPageInner() {
       {activationRequired && !checkoutSuccess && (
         <div style={{ color: 'var(--amber)', fontSize: 13, marginBottom: 18, padding: '10px 12px', background: 'var(--amber-soft)', borderRadius: 8, border: '1px solid var(--border)' }}>
           Sua conta ainda nao foi ativada. Finalize um checkout valido na LP para liberar acesso.
+        </div>
+      )}
+
+      {supabaseSetupRequired && (
+        <div style={{ color: 'var(--amber)', fontSize: 13, marginBottom: 18, padding: '10px 12px', background: 'var(--amber-soft)', borderRadius: 8, border: '1px solid var(--border)' }}>
+          {getSupabaseProductionSetupMessage()}
         </div>
       )}
 
