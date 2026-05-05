@@ -4,7 +4,7 @@ import { PLAN_CATALOG, PlanKey, normalizePlan } from "@/lib/billing/plans";
 
 type OrganizationLike = {
   id: string;
-  name: string;
+  name?: string | null;
   plan?: string | null;
   subscription_status?: string | null;
   stripe_customer_id?: string | null;

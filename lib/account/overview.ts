@@ -32,7 +32,11 @@ export async function getAccountOverview() {
     return null;
   }
 
-  if (account.isPreview || account.organization.previewMode) {
+  const previewOrganization = account.organization as typeof account.organization & {
+    previewMode?: boolean;
+  };
+
+  if (account.isPreview || previewOrganization.previewMode) {
     const onboardingSteps: OnboardingStep[] = [
       {
         id: "billing",

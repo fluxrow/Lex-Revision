@@ -29,8 +29,8 @@ export default async function AppLayout({
   return (
     <div className="app">
       <Sidebar
-        userName={account.membership.full_name}
-        userEmail={account.user.email || ""}
+        userName={account.membership.full_name || undefined}
+        userEmail={account.user?.email || ""}
       />
       <div className="app-main">
         <Topbar

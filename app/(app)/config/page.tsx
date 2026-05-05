@@ -11,7 +11,7 @@ export default async function ConfigPage() {
   return (
     <ConfigPageClient
       userName={overview.account.membership?.full_name || "Marina Rocha"}
-      userEmail={overview.account.user.email || "marina@silvaadv.com"}
+      userEmail={overview.account.user?.email || "marina@silvaadv.com"}
       userOab={overview.account.membership?.oab_number || null}
       organizationName={overview.account.organization?.name || "Lex Revision"}
       roleLabel={overview.roleLabel}

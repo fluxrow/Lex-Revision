@@ -31,7 +31,7 @@ export type CurrentAccount = {
   isPreview: boolean;
 };
 
-export const getCurrentAccount = cache(async () => {
+export const getCurrentAccount = cache(async (): Promise<CurrentAccount> => {
   let supabase;
 
   try {
