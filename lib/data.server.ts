@@ -16,14 +16,18 @@ export async function getContracts() {
     return data.map((contract: any) => ({
       id: contract.id,
       name: contract.name,
-      client: contract.clients?.name || "Cliente",
+      client: contract.clients?.name || "Rascunho interno",
       value: (contract.value_cents || 0) / 100,
       status:
         contract.status === "draft"
           ? "rascunho"
+          : contract.status === "pending_review"
+            ? "em_analise"
+            : contract.status === "pending_signature"
+              ? "aguardando"
           : contract.status === "signed"
             ? "assinado"
-            : "aguardando",
+            : "rascunho",
       updated: contract.updated_at.split("T")[0],
       type: contract.contract_type || "Geral",
     }));

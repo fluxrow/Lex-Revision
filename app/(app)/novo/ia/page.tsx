@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import Icon from "@/components/ui/Icon";
 import type { GeneratedContractDraft } from "@/lib/legal/generation";
@@ -44,6 +45,7 @@ type GenerationResult = {
 };
 
 export default function FlowIA() {
+  const router = useRouter();
   const [prompt, setPrompt] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const [loadingLabel, setLoadingLabel] = React.useState("");
@@ -51,6 +53,8 @@ export default function FlowIA() {
   const [result, setResult] = React.useState<GenerationResult | null>(null);
   const [addedClauseIds, setAddedClauseIds] = React.useState<string[]>([]);
   const [copied, setCopied] = React.useState(false);
+  const [saveLoading, setSaveLoading] = React.useState(false);
+  const [saveMessage, setSaveMessage] = React.useState<string | null>(null);
 
   const previewClauses = React.useMemo(() => {
     if (!result) {
@@ -160,6 +164,51 @@ export default function FlowIA() {
       window.setTimeout(() => setCopied(false), 1800);
     } catch {
       setError("Nao foi possivel copiar o texto deste rascunho.");
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    if (!result) {
+      return;
+    }
+
+    setSaveLoading(true);
+    setSaveMessage(null);
+    setError(null);
+
+    try {
+      const appliedSuggestions = result.suggestions.filter((suggestion) =>
+        addedClauseIds.includes(suggestion.id)
+      );
+      const content = previewClauses
+        .map((clause) => `Clausula ${clause.number} - ${clause.title}\n${clause.body}`)
+        .join("\n\n");
+
+      const response = await fetch("/api/contracts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: result.contract.title,
+          contractType: result.contract.contractLabel,
+          body: `${result.contract.title}\n\n${content}`,
+          appliedSuggestions,
+        }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error || "Nao foi possivel salvar este rascunho.");
+      }
+
+      setSaveMessage("Rascunho salvo no historico com sucesso.");
+      router.push("/historico");
+      router.refresh();
+    } catch (saveError: any) {
+      setError(saveError.message || "Nao foi possivel salvar este rascunho.");
+    } finally {
+      setSaveLoading(false);
     }
   };
 
@@ -274,6 +323,18 @@ export default function FlowIA() {
           </div>
 
           <div className="col" style={{ gap: 16 }}>
+            {error ? (
+              <div style={{ color: "var(--destructive, #ef4444)", fontSize: 13, padding: "10px 12px", background: "rgba(239, 68, 68, 0.1)", borderRadius: 8 }}>
+                {error}
+              </div>
+            ) : null}
+
+            {saveMessage ? (
+              <div style={{ color: "var(--green)", fontSize: 13, padding: "10px 12px", background: "var(--green-soft)", borderRadius: 8 }}>
+                {saveMessage}
+              </div>
+            ) : null}
+
             <div className="card">
               <div className="card-title">Resumo da geração</div>
               <div className="row" style={{ gap: 8, marginTop: 10, flexWrap: "wrap" }}>
@@ -366,7 +427,16 @@ export default function FlowIA() {
 
             <div className="card">
               <div className="card-title">Proximo passo</div>
-              <div className="card-sub">Este fluxo ja gera e revisa. Persistencia completa vem na proxima camada.</div>
+              <div className="card-sub">Agora o rascunho pode entrar no historico da operacao antes de seguir para assinatura.</div>
+              <button
+                className="btn btn-primary btn-lg"
+                style={{ width: "100%", marginBottom: 8 }}
+                onClick={handleSaveDraft}
+                disabled={saveLoading}
+              >
+                <Icon name="file" size={15} />
+                {saveLoading ? "Salvando..." : "Salvar no histórico"}
+              </button>
               <button className="btn btn-primary btn-lg" style={{ width: "100%", marginBottom: 8 }} onClick={handleCopy}>
                 <Icon name="copy" size={15} />
                 {copied ? "Texto copiado" : "Copiar rascunho"}
