@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { buildContractIntelligence } from "@/lib/contracts/ingestion";
 import { getCurrentAccount } from "@/lib/auth/account";
 import { isSupabaseEnvError } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
@@ -36,21 +37,43 @@ export async function POST(request: Request) {
     }
 
     const supabase = await createClient();
-    const { data: contract, error: contractError } = await supabase
+    const intelligence = buildContractIntelligence({
+      body: payload.body,
+      contractTypeHint: payload.contractType,
+      variableValues: payload.variableValues,
+    });
+
+    const baseInsertPayload = {
+      organization_id: account.organization.id,
+      name: payload.name,
+      status: "draft",
+      contract_type: payload.contractType,
+      template_id: payload.templateId ?? null,
+      variable_values: payload.variableValues,
+      body_md: payload.body,
+      ai_suggestions: payload.appliedSuggestions,
+      created_by: account.user.id,
+    };
+
+    let contractInsert = await supabase
       .from("contracts")
       .insert({
-        organization_id: account.organization.id,
-        name: payload.name,
-        status: "draft",
-        contract_type: payload.contractType,
-        template_id: payload.templateId ?? null,
-        variable_values: payload.variableValues,
-        body_md: payload.body,
-        ai_suggestions: payload.appliedSuggestions,
-        created_by: account.user.id,
+        ...baseInsertPayload,
+        source: payload.source,
+        structured_payload: intelligence.structuredPayload,
       })
       .select("id, name, status, created_at")
       .single();
+
+    if (contractInsert.error && isSchemaCompatError(contractInsert.error.message)) {
+      contractInsert = await supabase
+        .from("contracts")
+        .insert(baseInsertPayload)
+        .select("id, name, status, created_at")
+        .single();
+    }
+
+    const { data: contract, error: contractError } = contractInsert;
 
     if (contractError || !contract) {
       throw contractError || new Error("Nao foi possivel salvar o contrato.");
@@ -67,8 +90,22 @@ export async function POST(request: Request) {
         contract_type: payload.contractType,
         template_id: payload.templateId ?? null,
         applied_suggestions: payload.appliedSuggestions.map((item) => item.id),
+        structured_contract_type: intelligence.structuredPayload.contractType,
       },
     });
+
+    const analysisInsert = await supabase.from("contract_analysis_versions").insert({
+      contract_id: contract.id,
+      organization_id: account.organization.id,
+      provider: intelligence.analysisVersion.provider,
+      summary: intelligence.analysisVersion.summary,
+      overall_risk: intelligence.analysisVersion.overallRisk,
+      analysis_payload: intelligence.analysisVersion.analysisPayload,
+      created_by: account.user.id,
+    });
+    if (analysisInsert.error && !isAnalysisCompatError(analysisInsert.error.message)) {
+      throw analysisInsert.error;
+    }
 
     if (payload.templateId) {
       const { data: template } = await supabase
@@ -93,6 +130,15 @@ export async function POST(request: Request) {
         status: contract.status,
         createdAt: contract.created_at,
       },
+      structured: {
+        contractType: intelligence.structuredPayload.contractType,
+        sections: intelligence.structuredPayload.sections.length,
+        parties: intelligence.structuredPayload.parties.length,
+      },
+      analysis: {
+        provider: intelligence.analysisVersion.provider,
+        overallRisk: intelligence.analysisVersion.overallRisk,
+      },
     });
   } catch (error: any) {
     if (isSupabaseEnvError(error)) {
@@ -104,4 +150,24 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
+}
+
+function isSchemaCompatError(message?: string) {
+  if (!message) {
+    return false;
+  }
+
+  return ["structured_payload", "source", "Could not find the"].some((token) =>
+    message.includes(token)
+  );
+}
+
+function isAnalysisCompatError(message?: string) {
+  if (!message) {
+    return false;
+  }
+
+  return ["contract_analysis_versions", "analysis_payload", "overall_risk"].some((token) =>
+    message.includes(token)
+  );
 }
