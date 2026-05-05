@@ -22,6 +22,12 @@ type UploadFlowClientProps = {
 };
 
 type VariableState = Record<string, string>;
+type UploadedDocument = {
+  name: string;
+  mimeType: string;
+  contentBase64: string;
+  sizeLabel: string;
+};
 
 const DEFAULT_VARIABLES = [
   { key: "nome", label: "Nome do cliente", placeholder: "Maria Silva Andrade" },
@@ -38,6 +44,7 @@ export default function UploadFlowClient({ selectedTemplate }: UploadFlowClientP
   const [addedClause, setAddedClause] = React.useState(false);
   const [saveLoading, setSaveLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [uploadedDocument, setUploadedDocument] = React.useState<UploadedDocument | null>(null);
   const variableFields = React.useMemo(() => {
     const templateFields =
       selectedTemplate?.variableDefinitions?.length
@@ -76,7 +83,9 @@ export default function UploadFlowClient({ selectedTemplate }: UploadFlowClientP
 
   const uploadSummary = selectedTemplate
     ? `${selectedTemplate.name} · ${selectedTemplate.vars} variáveis prontas`
-    : "contrato_servicos.docx · 6 variáveis detectadas";
+    : uploadedDocument
+      ? `${uploadedDocument.name} · ${uploadedDocument.sizeLabel} · pronto para estruturar`
+      : "Selecione um .docx, .doc ou .pdf para estruturar";
 
   const handleSaveDraft = async () => {
     setSaveLoading(true);
@@ -94,6 +103,7 @@ export default function UploadFlowClient({ selectedTemplate }: UploadFlowClientP
           contractType,
           templateId: persistableTemplateId,
           variableValues: values,
+          documentFile: uploadedDocument,
           body,
           source: selectedTemplate ? "template_fill" : "upload_flow",
           appliedSuggestions: addedClause
@@ -149,7 +159,13 @@ export default function UploadFlowClient({ selectedTemplate }: UploadFlowClientP
         <UploadStage
           selectedTemplate={selectedTemplate}
           uploadSummary={uploadSummary}
+          uploadedDocument={uploadedDocument}
           variableFields={variableFields}
+          onDocumentReady={(document) => {
+            setUploadedDocument(document);
+            setError(null);
+          }}
+          onDocumentError={setError}
           onNext={() => setStage(1)}
         />
       ) : null}
@@ -216,19 +232,50 @@ function StepsHeader({ steps, current }: { steps: string[]; current: number }) {
 function UploadStage({
   selectedTemplate,
   uploadSummary,
+  uploadedDocument,
   variableFields,
+  onDocumentReady,
+  onDocumentError,
   onNext,
 }: {
   selectedTemplate: TemplateSummary;
   uploadSummary: string;
+  uploadedDocument: UploadedDocument | null;
   variableFields: Array<{ key: string; label: string; placeholder: string }>;
+  onDocumentReady: (document: UploadedDocument) => void;
+  onDocumentError: (message: string | null) => void;
   onNext: () => void;
 }) {
   const hasTemplate = Boolean(selectedTemplate);
-  const [ready, setReady] = React.useState(hasTemplate);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const ready = hasTemplate || Boolean(uploadedDocument);
+
+  const handleFileSelection = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    try {
+      onDocumentError(null);
+      const document = await readUploadedDocument(file);
+      onDocumentReady(document);
+    } catch (uploadError: any) {
+      onDocumentError(uploadError.message || "Nao foi possivel preparar o arquivo.");
+    } finally {
+      event.target.value = "";
+    }
+  };
 
   return (
     <div className="card" style={{ padding: 32 }}>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".doc,.docx,.pdf,.txt,.md,.html"
+        style={{ display: "none" }}
+        onChange={handleFileSelection}
+      />
       <div
         style={{
           height: 320,
@@ -240,9 +287,13 @@ function UploadStage({
           alignItems: "center",
           justifyContent: "center",
           gap: 14,
-          cursor: "pointer",
+          cursor: hasTemplate ? "default" : "pointer",
         }}
-        onClick={() => setReady(true)}
+        onClick={() => {
+          if (!hasTemplate) {
+            fileInputRef.current?.click();
+          }
+        }}
       >
         {!ready ? (
           <>
@@ -251,7 +302,14 @@ function UploadStage({
             </div>
             <div style={{ fontSize: 18, fontWeight: 600 }}>Arraste seu modelo aqui</div>
             <div className="muted" style={{ fontSize: 13 }}>.docx, .doc, .pdf — até 25 MB</div>
-            <button className="btn btn-secondary btn-sm" style={{ marginTop: 6 }}>
+            <button
+              className="btn btn-secondary btn-sm"
+              style={{ marginTop: 6 }}
+              onClick={(event) => {
+                event.stopPropagation();
+                fileInputRef.current?.click();
+              }}
+            >
               Ou escolher arquivo
             </button>
           </>
@@ -260,10 +318,23 @@ function UploadStage({
             <div style={{ width: 64, height: 64, borderRadius: "50%", background: "var(--green)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--bg-deep)" }}>
               <Icon name="check" size={28} />
             </div>
-            <div style={{ fontSize: 16, fontWeight: 600 }}>{selectedTemplate?.name || "contrato_servicos.docx"}</div>
-            <div style={{ color: "var(--green)", fontSize: 13 }}>
-              {hasTemplate ? uploadSummary : "Enviado · 24 KB · 6 variáveis detectadas"}
+            <div style={{ fontSize: 16, fontWeight: 600 }}>
+              {selectedTemplate?.name || uploadedDocument?.name || "documento.pdf"}
             </div>
+            <div style={{ color: "var(--green)", fontSize: 13 }}>
+              {uploadSummary}
+            </div>
+            {!hasTemplate ? (
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  fileInputRef.current?.click();
+                }}
+              >
+                Trocar arquivo
+              </button>
+            ) : null}
           </>
         )}
       </div>
@@ -514,4 +585,52 @@ function slugify(value: string) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
+}
+
+async function readUploadedDocument(file: File): Promise<UploadedDocument> {
+  const maxSizeBytes = 25 * 1024 * 1024;
+  const supportedTypes = [
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "text/plain",
+    "text/markdown",
+    "text/html",
+    "",
+  ];
+
+  if (!supportedTypes.includes(file.type)) {
+    throw new Error("Formato não suportado. Use .doc, .docx, .pdf, .txt, .md ou .html.");
+  }
+
+  if (file.size > maxSizeBytes) {
+    throw new Error("Arquivo acima de 25 MB. Envie um documento menor para continuar.");
+  }
+
+  const arrayBuffer = await file.arrayBuffer();
+  return {
+    name: file.name,
+    mimeType: file.type || "application/octet-stream",
+    contentBase64: arrayBufferToBase64(arrayBuffer),
+    sizeLabel: formatFileSize(file.size),
+  };
+}
+
+function arrayBufferToBase64(buffer: ArrayBuffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+
+  return btoa(binary);
+}
+
+function formatFileSize(size: number) {
+  if (size >= 1024 * 1024) {
+    return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  return `${Math.max(1, Math.round(size / 1024))} KB`;
 }

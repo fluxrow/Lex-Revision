@@ -12,6 +12,14 @@ const createContractSchema = z.object({
   body: z.string().trim().min(30),
   templateId: z.string().uuid().optional().nullable(),
   variableValues: z.record(z.string(), z.string()).optional().default({}),
+  documentFile: z
+    .object({
+      name: z.string().trim().min(1),
+      mimeType: z.string().trim().optional().nullable(),
+      contentBase64: z.string().trim().min(1),
+    })
+    .optional()
+    .nullable(),
   source: z.enum(["ai_generate", "template_fill", "upload_flow"]).optional().default("ai_generate"),
   appliedSuggestions: z
     .array(
@@ -37,10 +45,13 @@ export async function POST(request: Request) {
     }
 
     const supabase = await createClient();
-    const intelligence = buildContractIntelligence({
+    const intelligence = await buildContractIntelligence({
       body: payload.body,
       contractTypeHint: payload.contractType,
       variableValues: payload.variableValues,
+      fileName: payload.documentFile?.name,
+      mimeType: payload.documentFile?.mimeType,
+      fileContentBase64: payload.documentFile?.contentBase64,
     });
 
     const baseInsertPayload = {
@@ -91,6 +102,8 @@ export async function POST(request: Request) {
         template_id: payload.templateId ?? null,
         applied_suggestions: payload.appliedSuggestions.map((item) => item.id),
         structured_contract_type: intelligence.structuredPayload.contractType,
+        ingestion_provider: intelligence.structuredPayload.ingestionProvider,
+        uploaded_document_name: payload.documentFile?.name || null,
       },
     });
 
@@ -134,6 +147,7 @@ export async function POST(request: Request) {
         contractType: intelligence.structuredPayload.contractType,
         sections: intelligence.structuredPayload.sections.length,
         parties: intelligence.structuredPayload.parties.length,
+        provider: intelligence.structuredPayload.ingestionProvider,
       },
       analysis: {
         provider: intelligence.analysisVersion.provider,

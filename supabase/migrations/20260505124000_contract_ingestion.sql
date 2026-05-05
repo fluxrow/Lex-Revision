@@ -23,8 +23,26 @@ create index if not exists contract_analysis_versions_org_id_idx
 alter table contract_analysis_versions enable row level security;
 
 create policy "members read contract analyses" on contract_analysis_versions
-  for select using (auth.is_member_of(organization_id));
+  for select using (
+    exists(
+      select 1 from public.memberships
+      where user_id = auth.uid()
+        and organization_id = contract_analysis_versions.organization_id
+    )
+  );
 
 create policy "members write contract analyses" on contract_analysis_versions
-  for all using (auth.is_member_of(organization_id))
-  with check (auth.is_member_of(organization_id));
+  for all using (
+    exists(
+      select 1 from public.memberships
+      where user_id = auth.uid()
+        and organization_id = contract_analysis_versions.organization_id
+    )
+  )
+  with check (
+    exists(
+      select 1 from public.memberships
+      where user_id = auth.uid()
+        and organization_id = contract_analysis_versions.organization_id
+    )
+  );

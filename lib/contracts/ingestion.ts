@@ -3,6 +3,7 @@ import {
   buildClauseSuggestionsFallback,
   buildReviewFallback,
 } from "@/lib/legal/analysis";
+import { extractWithDocling } from "@/lib/contracts/docling";
 
 export type StructuredContractPayload = {
   contractType: string;
@@ -15,6 +16,13 @@ export type StructuredContractPayload = {
   amounts: string[];
   variables: Record<string, string>;
   detectedClauseIds: string[];
+  ingestionProvider?: string;
+  documentMetrics?: {
+    tablesCount: number;
+    picturesCount: number;
+    fileName?: string;
+    fileFormat?: string;
+  };
 };
 
 export type ContractAnalysisVersionPayload = {
@@ -24,42 +32,72 @@ export type ContractAnalysisVersionPayload = {
   analysisPayload: Record<string, unknown>;
 };
 
-export function buildContractIntelligence(params: {
+export async function buildContractIntelligence(params: {
   body: string;
   contractTypeHint?: string | null;
   variableValues?: Record<string, string>;
+  fileName?: string | null;
+  mimeType?: string | null;
+  fileContentBase64?: string | null;
 }) {
-  const analysis = analyzeContractDocument(
-    params.body,
-    params.contractTypeHint || undefined
-  );
+  const doclingExtraction = await extractWithDocling({
+    body: params.body,
+    fileName: params.fileName,
+    mimeType: params.mimeType,
+    fileContentBase64: params.fileContentBase64,
+  });
+  const sourceBody = doclingExtraction?.text.trim() || params.body;
+  const analysis = analyzeContractDocument(sourceBody, params.contractTypeHint || undefined);
   const review = buildReviewFallback(analysis);
   const clauseSuggestions = buildClauseSuggestionsFallback(analysis);
 
   const structuredPayload: StructuredContractPayload = {
     contractType: analysis.contractType,
-    sections: extractSections(params.body),
-    parties: extractParties(params.body, params.variableValues),
-    dates: extractDates(params.body, params.variableValues),
-    amounts: extractAmounts(params.body, params.variableValues),
+    sections:
+      doclingExtraction?.sections.length && doclingExtraction.sections.some((section) => section.text.trim())
+        ? doclingExtraction.sections
+        : extractSections(sourceBody),
+    parties: extractParties(sourceBody, params.variableValues),
+    dates: extractDates(sourceBody, params.variableValues),
+    amounts: extractAmounts(sourceBody, params.variableValues),
     variables: params.variableValues || {},
     detectedClauseIds: analysis.presentClauses.map((clause) => clause.id),
+    ingestionProvider: doclingExtraction?.provider || "lex_structured_fallback",
+    documentMetrics: doclingExtraction
+      ? {
+          tablesCount: doclingExtraction.tablesCount,
+          picturesCount: doclingExtraction.picturesCount,
+          fileName: doclingExtraction.fileName,
+          fileFormat: doclingExtraction.fileFormat,
+        }
+      : undefined,
   };
 
   const analysisVersion: ContractAnalysisVersionPayload = {
-    provider: "lex_structured_fallback",
+    provider: doclingExtraction ? `${doclingExtraction.provider}+lex_analysis` : "lex_structured_fallback",
     summary: review.executiveSummary,
     overallRisk: review.overallRisk,
     analysisPayload: {
       analysis,
       review,
       clauseSuggestions,
+      extraction: doclingExtraction
+        ? {
+            provider: doclingExtraction.provider,
+            sectionsCount: doclingExtraction.sections.length,
+            tablesCount: doclingExtraction.tablesCount,
+            picturesCount: doclingExtraction.picturesCount,
+            fileName: doclingExtraction.fileName,
+            fileFormat: doclingExtraction.fileFormat,
+          }
+        : null,
     },
   };
 
   return {
     structuredPayload,
     analysisVersion,
+    extraction: doclingExtraction,
   };
 }
 
