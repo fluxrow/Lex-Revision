@@ -19,10 +19,12 @@ export default async function ConfigPage() {
       clientCount={overview.clientCount}
       contractCount={overview.contractCount}
       teamMembers={overview.teamMembers}
+      accessVouchers={overview.accessVouchers}
       planLabel={overview.planLabel}
       subscriptionStatus={overview.subscriptionStatus}
       canManageBilling={overview.canManageBilling}
       canManageWorkspace={["owner", "admin"].includes(overview.account.membership?.role || "")}
+      canManageVouchers={overview.canManageVouchers}
       onboardingSteps={overview.onboardingSteps}
     />
   );

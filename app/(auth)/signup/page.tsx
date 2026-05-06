@@ -23,10 +23,12 @@ function SignupPageInner() {
   const checkoutSuccess = searchParams.get("checkout") === "success";
   const selectedPlan = searchParams.get("plan");
   const sessionId = searchParams.get("session_id");
+  const voucherCode = searchParams.get("voucher");
+  const initialEmail = searchParams.get("email") || "";
   const activationRequired = searchParams.get("activation") === "required";
   const supabaseSetupRequired = searchParams.get("setup") === "supabase";
 
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -40,23 +42,36 @@ function SignupPageInner() {
     setError(null);
 
     try {
-      if (!sessionId) {
-        throw new Error("Finalize o checkout da LP antes de ativar seu acesso.");
+      if (!sessionId && !voucherCode) {
+        throw new Error("Finalize o checkout da LP ou use um voucher valido para liberar seu acesso.");
       }
 
-      const activationResponse = await fetch("/api/auth/activate", {
+      const activationResponse = await fetch(sessionId ? "/api/auth/activate" : "/api/auth/redeem-voucher", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          sessionId,
-          email,
-          password,
-          firstName,
-          lastName,
-          company,
-        }),
+        body: JSON.stringify(
+          sessionId
+            ? {
+                sessionId,
+                email,
+                password,
+                firstName,
+                lastName,
+                company,
+              }
+            : voucherCode
+              ? {
+                  voucherCode,
+                  email,
+                  password,
+                  firstName,
+                  lastName,
+                  company,
+                }
+              : {}
+        ),
       });
 
       const activationPayload = await activationResponse.json();
@@ -109,6 +124,12 @@ function SignupPageInner() {
         </div>
       )}
 
+      {voucherCode && (
+        <div style={{ color: 'var(--accent)', fontSize: 13, marginBottom: 18, padding: '10px 12px', background: 'var(--accent-soft)', borderRadius: 8, border: '1px solid var(--border)' }}>
+          Voucher detectado. Este acesso sera liberado sem checkout, usando o codigo <strong>{voucherCode}</strong>.
+        </div>
+      )}
+
       {activationRequired && !checkoutSuccess && (
         <div style={{ color: 'var(--amber)', fontSize: 13, marginBottom: 18, padding: '10px 12px', background: 'var(--amber-soft)', borderRadius: 8, border: '1px solid var(--border)' }}>
           Sua conta ainda nao foi ativada. Finalize um checkout valido na LP para liberar acesso.
@@ -121,9 +142,15 @@ function SignupPageInner() {
         </div>
       )}
 
-      <h2 style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.02em', margin: '0 0 6px' }}>Ative seu acesso</h2>
+      <h2 style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.02em', margin: '0 0 6px' }}>
+        {voucherCode ? "Liberar acesso por voucher" : "Ative seu acesso"}
+      </h2>
       <p className="muted" style={{ margin: '0 0 28px', fontSize: 14 }}>
-        Se você ainda não contratou um plano, volte para a <Link href="/#precos" style={{color:'var(--accent)', fontWeight: 600}}>LP e escolha um pacote</Link>.
+        {voucherCode ? (
+          <>Use o mesmo e-mail autorizado no voucher para criar sua conta de teste.</>
+        ) : (
+          <>Se você ainda não contratou um plano, volte para a <Link href="/#precos" style={{color:'var(--accent)', fontWeight: 600}}>LP e escolha um pacote</Link>.</>
+        )}
       </p>
 
       <form onSubmit={handleSubmit}>
@@ -161,7 +188,7 @@ function SignupPageInner() {
         </button>
       </form>
 
-      {!sessionId && (
+      {!sessionId && !voucherCode && (
         <p className="muted" style={{ textAlign: 'center', marginTop: 14, fontSize: 12.5 }}>
           Esta tela depende de um checkout valido. Se ainda nao contratou, volte para a <Link href="/#precos" style={{color:'var(--accent)', fontWeight: 600}}>LP e escolha um plano</Link>.
         </p>

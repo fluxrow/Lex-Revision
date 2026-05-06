@@ -43,6 +43,7 @@ alter table signers               enable row level security;
 alter table activity_logs         enable row level security;
 alter table invoices              enable row level security;
 alter table usage_metrics         enable row level security;
+alter table access_vouchers       enable row level security;
 
 -- ─── organizations ──────────────────────────────────────────────────────────
 create policy "members can read their org" on organizations
@@ -126,6 +127,14 @@ create policy "owners/admins read invoices" on invoices
 -- ─── usage_metrics (read-only) ─────────────────────────────────────────────
 create policy "members read usage" on usage_metrics
   for select using (public.is_member_of(organization_id));
+
+-- ─── access_vouchers ────────────────────────────────────────────────────────
+create policy "owners/admins read vouchers" on access_vouchers
+  for select using (public.has_role_in(issuer_organization_id, array['owner','admin']));
+
+create policy "owners/admins manage vouchers" on access_vouchers
+  for all using (public.has_role_in(issuer_organization_id, array['owner','admin']))
+  with check (public.has_role_in(issuer_organization_id, array['owner','admin']));
 
 -- ─── service_role (Edge Functions / webhooks) bypassa RLS automaticamente ──
 -- Qualquer mutação vinda de webhooks Stripe/Clicksign deve usar service_role.

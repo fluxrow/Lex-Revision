@@ -182,6 +182,30 @@ create table usage_metrics (
 );
 create index on usage_metrics(organization_id, period_month, metric);
 
+-- ─── Vouchers de acesso para testes / onboarding manual ─────────────────────
+create table access_vouchers (
+  id uuid primary key default uuid_generate_v4(),
+  issuer_organization_id uuid not null references organizations(id) on delete cascade,
+  recipient_email text not null,
+  recipient_name text,
+  company_name text,
+  plan text not null default 'professional',     -- starter | professional | firm
+  role member_role not null default 'owner',
+  code text not null unique,
+  status text not null default 'issued',         -- issued | redeemed | revoked | expired
+  notes text,
+  expires_at timestamptz,
+  redeemed_at timestamptz,
+  redeemed_by_user_id uuid references auth.users(id) on delete set null,
+  redeemed_organization_id uuid references organizations(id) on delete set null,
+  created_by uuid references auth.users(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index on access_vouchers(issuer_organization_id, created_at desc);
+create index on access_vouchers(recipient_email);
+create index on access_vouchers(status, created_at desc);
+
 -- ─── Triggers: updated_at automático ────────────────────────────────────────
 create or replace function set_updated_at() returns trigger as $$
 begin new.updated_at = now(); return new; end;
@@ -194,6 +218,8 @@ create trigger t_clients_updated before update on clients
 create trigger t_templates_updated before update on contract_templates
   for each row execute function set_updated_at();
 create trigger t_contracts_updated before update on contracts
+  for each row execute function set_updated_at();
+create trigger t_access_vouchers_updated before update on access_vouchers
   for each row execute function set_updated_at();
 
 -- ─── Storage buckets ────────────────────────────────────────────────────────

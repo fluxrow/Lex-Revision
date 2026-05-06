@@ -25,6 +25,21 @@ export type TeamMemberSummary = {
   createdAt: string | null;
 };
 
+export type AccessVoucherSummary = {
+  id: string;
+  recipientEmail: string;
+  recipientName: string | null;
+  companyName: string | null;
+  plan: string;
+  role: string;
+  code: string;
+  status: string;
+  notes: string | null;
+  expiresAt: string | null;
+  redeemedAt: string | null;
+  createdAt: string | null;
+};
+
 export async function getAccountOverview() {
   const account = await getCurrentAccount();
 
@@ -107,8 +122,10 @@ export async function getAccountOverview() {
           createdAt: new Date("2026-05-04T12:00:00.000Z").toISOString(),
         },
       ],
+      accessVouchers: [] as AccessVoucherSummary[],
       nextStep: null,
       canManageBilling: false,
+      canManageVouchers: false,
     };
   }
 
@@ -136,6 +153,13 @@ export async function getAccountOverview() {
     .select("id, user_id, full_name, role, oab_number, created_at")
     .eq("organization_id", account.organization.id)
     .order("created_at", { ascending: true });
+  const { data: voucherRows } = await supabase
+    .from("access_vouchers")
+    .select(
+      "id, recipient_email, recipient_name, company_name, plan, role, code, status, notes, expires_at, redeemed_at, created_at"
+    )
+    .eq("issuer_organization_id", account.organization.id)
+    .order("created_at", { ascending: false });
 
   const emailByUserId = new Map<string, string>();
 
@@ -171,6 +195,21 @@ export async function getAccountOverview() {
   const planMeta = PLAN_CATALOG[normalizedPlan];
   const subscriptionStatus = account.organization.subscription_status ?? "inactive";
   const canManageBilling = Boolean(account.organization.stripe_customer_id);
+  const canManageVouchers = ["owner", "admin"].includes(account.membership.role || "");
+  const accessVouchers: AccessVoucherSummary[] = (voucherRows ?? []).map((voucher) => ({
+    id: voucher.id,
+    recipientEmail: voucher.recipient_email,
+    recipientName: voucher.recipient_name ?? null,
+    companyName: voucher.company_name ?? null,
+    plan: voucher.plan,
+    role: voucher.role,
+    code: voucher.code,
+    status: voucher.status,
+    notes: voucher.notes ?? null,
+    expiresAt: voucher.expires_at ?? null,
+    redeemedAt: voucher.redeemed_at ?? null,
+    createdAt: voucher.created_at ?? null,
+  }));
 
   const onboardingSteps: OnboardingStep[] = [
     {
@@ -240,8 +279,10 @@ export async function getAccountOverview() {
     statusLabel: getStatusLabel(subscriptionStatus),
     roleLabel: getRoleLabel(account.membership.role),
     teamMembers,
+    accessVouchers,
     nextStep: onboardingSteps.find((step) => !step.complete) ?? null,
     canManageBilling,
+    canManageVouchers,
   };
 }
 

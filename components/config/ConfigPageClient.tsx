@@ -7,7 +7,11 @@ import SignOutButton from "@/components/auth/SignOutButton";
 import CustomerPortalButton from "@/components/billing/CustomerPortalButton";
 import OnboardingChecklist from "@/components/account/OnboardingChecklist";
 import Icon from "@/components/ui/Icon";
-import type { OnboardingStep, TeamMemberSummary } from "@/lib/account/overview";
+import type {
+  AccessVoucherSummary,
+  OnboardingStep,
+  TeamMemberSummary,
+} from "@/lib/account/overview";
 
 type ConfigPageClientProps = {
   userName: string;
@@ -19,10 +23,12 @@ type ConfigPageClientProps = {
   clientCount: number;
   contractCount: number;
   teamMembers: TeamMemberSummary[];
+  accessVouchers: AccessVoucherSummary[];
   planLabel: string;
   subscriptionStatus: string;
   canManageBilling: boolean;
   canManageWorkspace: boolean;
+  canManageVouchers: boolean;
   onboardingSteps: OnboardingStep[];
 };
 
@@ -43,10 +49,12 @@ export default function ConfigPageClient({
   clientCount,
   contractCount,
   teamMembers,
+  accessVouchers,
   planLabel,
   subscriptionStatus,
   canManageBilling,
   canManageWorkspace,
+  canManageVouchers,
   onboardingSteps,
 }: ConfigPageClientProps) {
   const router = useRouter();
@@ -64,10 +72,21 @@ export default function ConfigPageClient({
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteMessage, setInviteMessage] = useState<string | null>(null);
   const [inviteError, setInviteError] = useState<string | null>(null);
+  const [voucherRecipientName, setVoucherRecipientName] = useState("");
+  const [voucherRecipientEmail, setVoucherRecipientEmail] = useState("");
+  const [voucherCompanyName, setVoucherCompanyName] = useState("");
+  const [voucherPlan, setVoucherPlan] = useState("professional");
+  const [voucherRole, setVoucherRole] = useState("owner");
+  const [voucherExpiresAt, setVoucherExpiresAt] = useState("");
+  const [voucherNotes, setVoucherNotes] = useState("");
+  const [voucherLoading, setVoucherLoading] = useState(false);
+  const [voucherMessage, setVoucherMessage] = useState<string | null>(null);
+  const [voucherError, setVoucherError] = useState<string | null>(null);
 
   const tabs = [
     ["perfil", "Perfil"],
     ["equipe", "Equipe"],
+    ["vouchers", "Vouchers"],
     ["integracao", "Integrações"],
     ["notif", "Notificações"],
     ["seguranca", "Segurança"],
@@ -168,6 +187,90 @@ export default function ConfigPageClient({
     } finally {
       setInviteLoading(false);
     }
+  };
+
+  const copyVoucherValue = async (value: string, successLabel: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setVoucherMessage(successLabel);
+      setVoucherError(null);
+    } catch {
+      setVoucherError("Nao foi possivel copiar automaticamente. Copie manualmente o valor exibido.");
+    }
+  };
+
+  const createVoucher = async () => {
+    setVoucherLoading(true);
+    setVoucherMessage(null);
+    setVoucherError(null);
+
+    try {
+      const response = await fetch("/api/account/vouchers", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          recipientName: voucherRecipientName,
+          recipientEmail: voucherRecipientEmail,
+          companyName: voucherCompanyName,
+          plan: voucherPlan,
+          role: voucherRole,
+          expiresAt: voucherExpiresAt || null,
+          notes: voucherNotes,
+        }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error || "Nao foi possivel emitir o voucher.");
+      }
+
+      setVoucherRecipientName("");
+      setVoucherRecipientEmail("");
+      setVoucherCompanyName("");
+      setVoucherPlan("professional");
+      setVoucherRole("owner");
+      setVoucherExpiresAt("");
+      setVoucherNotes("");
+      setVoucherMessage(`Voucher criado com sucesso: ${payload.voucher.code}`);
+      startTransition(() => {
+        router.refresh();
+      });
+    } catch (error: any) {
+      setVoucherError(error.message || "Nao foi possivel emitir o voucher.");
+    } finally {
+      setVoucherLoading(false);
+    }
+  };
+
+  const getVoucherLink = (voucher: AccessVoucherSummary) => {
+    const baseUrl =
+      (typeof window !== "undefined" ? window.location.origin : "") ||
+      process.env.NEXT_PUBLIC_APP_URL ||
+      "";
+    const searchParams = new URLSearchParams({
+      voucher: voucher.code,
+      email: voucher.recipientEmail,
+    });
+
+    return `${baseUrl}/signup?${searchParams.toString()}`;
+  };
+
+  const getVoucherStatusLabel = (voucher: AccessVoucherSummary) => {
+    if (voucher.status === "redeemed") {
+      return "Resgatado";
+    }
+
+    if (voucher.status === "revoked") {
+      return "Revogado";
+    }
+
+    if (voucher.expiresAt && new Date(voucher.expiresAt).getTime() < Date.now()) {
+      return "Expirado";
+    }
+
+    return "Emitido";
   };
 
   return (
@@ -440,6 +543,190 @@ export default function ConfigPageClient({
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {tab === "vouchers" && (
+        <div className="grid" style={{ gridTemplateColumns: "1fr 1.05fr", gap: 20 }}>
+          <div className="card">
+            <div className="card-title">Emitir voucher de acesso</div>
+            <div className="card-sub">
+              Libere um workspace sem Stripe para pessoas específicas testarem a plataforma.
+            </div>
+            <div className="field">
+              <label className="field-label">Nome da pessoa</label>
+              <input
+                className="input"
+                value={voucherRecipientName}
+                onChange={(event) => setVoucherRecipientName(event.target.value)}
+                disabled={!canManageVouchers || voucherLoading}
+              />
+            </div>
+            <div className="field">
+              <label className="field-label">E-mail autorizado</label>
+              <input
+                className="input"
+                type="email"
+                value={voucherRecipientEmail}
+                onChange={(event) => setVoucherRecipientEmail(event.target.value)}
+                disabled={!canManageVouchers || voucherLoading}
+              />
+            </div>
+            <div className="field">
+              <label className="field-label">Nome do workspace</label>
+              <input
+                className="input"
+                placeholder="Ex: Teste Silva Adv"
+                value={voucherCompanyName}
+                onChange={(event) => setVoucherCompanyName(event.target.value)}
+                disabled={!canManageVouchers || voucherLoading}
+              />
+            </div>
+            <div className="grid grid-2" style={{ gap: 12 }}>
+              <div className="field" style={{ marginBottom: 0 }}>
+                <label className="field-label">Plano liberado</label>
+                <select
+                  className="input"
+                  value={voucherPlan}
+                  onChange={(event) => setVoucherPlan(event.target.value)}
+                  disabled={!canManageVouchers || voucherLoading}
+                >
+                  <option value="starter">Starter</option>
+                  <option value="professional">Professional</option>
+                  <option value="firm">Firm</option>
+                </select>
+              </div>
+              <div className="field" style={{ marginBottom: 0 }}>
+                <label className="field-label">Papel inicial</label>
+                <select
+                  className="input"
+                  value={voucherRole}
+                  onChange={(event) => setVoucherRole(event.target.value)}
+                  disabled={!canManageVouchers || voucherLoading}
+                >
+                  <option value="owner">Owner</option>
+                  <option value="admin">Admin</option>
+                  <option value="lawyer">Advogado</option>
+                  <option value="paralegal">Paralegal</option>
+                  <option value="viewer">Leitura</option>
+                </select>
+              </div>
+            </div>
+            <div className="field">
+              <label className="field-label">Expira em</label>
+              <input
+                className="input"
+                type="date"
+                value={voucherExpiresAt}
+                onChange={(event) => setVoucherExpiresAt(event.target.value)}
+                disabled={!canManageVouchers || voucherLoading}
+              />
+            </div>
+            <div className="field">
+              <label className="field-label">Observações internas</label>
+              <textarea
+                className="input"
+                style={{ minHeight: 92, resize: "vertical", paddingTop: 12 }}
+                value={voucherNotes}
+                onChange={(event) => setVoucherNotes(event.target.value)}
+                disabled={!canManageVouchers || voucherLoading}
+              />
+            </div>
+            {!canManageVouchers ? (
+              <div className="muted" style={{ fontSize: 12, marginBottom: 16 }}>
+                Somente owner ou admin podem emitir vouchers.
+              </div>
+            ) : (
+              <div className="muted" style={{ fontSize: 12, marginBottom: 16 }}>
+                Cada voucher libera um acesso sem cobrança, vinculado ao e-mail definido acima.
+              </div>
+            )}
+            {voucherError ? (
+              <div style={{ color: "var(--destructive, #ef4444)", fontSize: 13, marginBottom: 16, padding: "8px 12px", background: "rgba(239, 68, 68, 0.1)", borderRadius: 6 }}>
+                {voucherError}
+              </div>
+            ) : null}
+            {voucherMessage ? (
+              <div style={{ color: "var(--green)", fontSize: 13, marginBottom: 16, padding: "8px 12px", background: "var(--green-soft)", borderRadius: 6 }}>
+                {voucherMessage}
+              </div>
+            ) : null}
+            <button
+              className="btn btn-primary"
+              type="button"
+              onClick={createVoucher}
+              disabled={!canManageVouchers || voucherLoading}
+              style={{ width: "100%" }}
+            >
+              {voucherLoading ? "Emitindo..." : "Criar voucher"}
+            </button>
+          </div>
+
+          <div className="card" style={{ padding: 0 }}>
+            <div className="row sp-between" style={{ padding: "18px 20px", borderBottom: "1px solid var(--border)" }}>
+              <div>
+                <div className="card-title" style={{ margin: 0 }}>Vouchers emitidos</div>
+                <div className="card-sub">{accessVouchers.length} acesso(s) administrativo(s) sem custo emitidos</div>
+              </div>
+            </div>
+            {accessVouchers.length === 0 ? (
+              <div className="muted" style={{ padding: 20, fontSize: 13 }}>
+                Nenhum voucher emitido ainda. Use esta área para liberar testes controlados sem passar pelo Stripe.
+              </div>
+            ) : (
+              <div style={{ display: "grid", gap: 12, padding: 16 }}>
+                {accessVouchers.map((voucher) => (
+                  <div
+                    key={voucher.id}
+                    className="card-hover"
+                    style={{ border: "1px solid var(--border)", borderRadius: 14, padding: 14 }}
+                  >
+                    <div className="row sp-between" style={{ gap: 12, alignItems: "flex-start" }}>
+                      <div>
+                        <div style={{ fontWeight: 700 }}>{voucher.recipientName || voucher.recipientEmail}</div>
+                        <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>{voucher.recipientEmail}</div>
+                      </div>
+                      <span className={`chip ${voucher.status === "redeemed" ? "chip-green" : "chip-accent"}`}>
+                        {getVoucherStatusLabel(voucher)}
+                      </span>
+                    </div>
+                    <div className="row" style={{ gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+                      <span className="chip chip-accent">{voucher.plan}</span>
+                      <span className="chip">{voucher.role}</span>
+                      {voucher.companyName ? <span className="chip">{voucher.companyName}</span> : null}
+                    </div>
+                    <div style={{ marginTop: 14, padding: "10px 12px", borderRadius: 10, background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+                      <div className="muted" style={{ fontSize: 11, marginBottom: 4 }}>Código</div>
+                      <div style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 13.5, fontWeight: 700 }}>
+                        {voucher.code}
+                      </div>
+                    </div>
+                    {voucher.notes ? (
+                      <div className="muted" style={{ fontSize: 12, marginTop: 10 }}>
+                        {voucher.notes}
+                      </div>
+                    ) : null}
+                    <div className="row" style={{ gap: 10, marginTop: 14, flexWrap: "wrap" }}>
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        type="button"
+                        onClick={() => copyVoucherValue(voucher.code, `Codigo ${voucher.code} copiado.`)}
+                      >
+                        Copiar código
+                      </button>
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        type="button"
+                        onClick={() => copyVoucherValue(getVoucherLink(voucher), "Link de ativacao copiado.")}
+                      >
+                        Copiar link
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 

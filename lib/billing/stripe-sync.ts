@@ -2,6 +2,7 @@ import Stripe from "stripe";
 
 import { stripe } from "@/lib/stripe";
 import { PlanKey, getPlanFromPriceId, normalizePlan } from "@/lib/billing/plans";
+import { buildUniqueOrganizationSlug } from "@/lib/organizations/slug";
 
 type AdminClient = any;
 
@@ -146,7 +147,7 @@ export async function upsertOrganizationFromBilling(
     .from("organizations")
     .insert({
       ...payload,
-      slug: buildUniqueSlug(organizationName),
+      slug: buildUniqueOrganizationSlug(organizationName),
     })
     .select("id, name, slug, plan, subscription_status")
     .single();
@@ -223,16 +224,4 @@ export async function upsertInvoiceFromStripeInvoice(
   if (error) {
     throw error;
   }
-}
-
-function buildUniqueSlug(value: string) {
-  const base = value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 40) || "lex-revision";
-
-  return `${base}-${crypto.randomUUID().slice(0, 8)}`;
 }
