@@ -27,6 +27,12 @@ Subir o Lex para um projeto Supabase fora da maquina local, para liberar:
 6. Testar ativacao, equipe, contratos e billing
 7. Desligar o `preview admin`
 
+## Observações práticas deste projeto
+
+- Se a `Direct connection` falhar por rede ou IPv6, use a connection string do `Session pooler` para aplicar as migrations.
+- Neste projeto, as policies precisaram usar helpers em `public`; criar funções dentro do schema `auth` falhou no Supabase hospedado.
+- A integração Supabase -> Vercel ajuda nas envs públicas, mas vale conferir manualmente se `SUPABASE_SERVICE_ROLE_KEY` e a connection string do Postgres ficaram utilizáveis.
+
 ## Envs obrigatorias no Vercel
 
 - `NEXT_PUBLIC_SUPABASE_URL`
