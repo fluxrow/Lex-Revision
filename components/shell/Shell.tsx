@@ -118,9 +118,9 @@ export function Topbar({ title, sub, actions }: { title: string, sub?: string, a
         <button className="btn btn-ghost btn-icon" title="Alternar tema" onClick={toggleTheme}>
           <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={17}/>
         </button>
-        <button className="btn btn-ghost btn-icon" title="Notificações">
+        <Link href="/config" className="btn btn-ghost btn-icon" title="Abrir configurações" style={{ textDecoration: "none" }}>
           <Icon name="bell" size={17}/>
-        </button>
+        </Link>
       </div>
     </div>
   );

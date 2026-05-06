@@ -1,6 +1,31 @@
 import { MOCK_CONTRACTS, MOCK_TEMPLATES } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 
+export type ClientSummary = {
+  id: string;
+  name: string;
+  type: string;
+  doc: string;
+  email: string;
+  contracts: number;
+  since: string;
+};
+
+export type SignatureSummary = {
+  id: string;
+  contract: string;
+  provider: string;
+  status: string;
+  progress: number;
+  total: number;
+  signers: Array<{
+    name: string;
+    email: string;
+    status: string;
+    when: string | null;
+  }>;
+};
+
 export async function getContracts() {
   try {
     const supabase = await createClient();
@@ -115,5 +140,71 @@ export async function getTemplateById(templateId?: string | null) {
           variableDefinitions: [],
         }
       : null;
+  }
+}
+
+export async function getClientsOverview(): Promise<ClientSummary[]> {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("clients")
+      .select("id, type, name, document, email, created_at, contracts(id)")
+      .order("created_at", { ascending: false });
+
+    if (error || !data) {
+      return [];
+    }
+
+    return data.map((client: any) => ({
+      id: client.id,
+      name: client.name,
+      type: client.type || "PF",
+      doc: client.document || "—",
+      email: client.email || "—",
+      contracts: Array.isArray(client.contracts) ? client.contracts.length : 0,
+      since: client.created_at ? client.created_at.substring(0, 7) : "—",
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export async function getSignatureOverview(): Promise<SignatureSummary[]> {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("signature_requests")
+      .select(
+        "id, provider, status, sent_at, completed_at, contract:contracts(name), signers(name, email, status, signed_at, viewed_at, position)"
+      )
+      .order("sent_at", { ascending: false });
+
+    if (error || !data) {
+      return [];
+    }
+
+    return data.map((request: any) => {
+      const signers = Array.isArray(request.signers)
+        ? [...request.signers].sort((a, b) => (a.position || 0) - (b.position || 0))
+        : [];
+      const progress = signers.filter((signer) => signer.status === "signed").length;
+
+      return {
+        id: request.id,
+        contract: request.contract?.name || "Contrato sem nome",
+        provider: request.provider || "clicksign",
+        status: request.status || "sent",
+        progress,
+        total: signers.length,
+        signers: signers.map((signer) => ({
+          name: signer.name,
+          email: signer.email,
+          status: signer.status,
+          when: signer.signed_at || signer.viewed_at || null,
+        })),
+      };
+    });
+  } catch {
+    return [];
   }
 }

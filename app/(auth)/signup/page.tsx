@@ -195,7 +195,7 @@ function SignupPageInner() {
       )}
 
       <p className="dim" style={{ textAlign: 'center', marginTop: 16, fontSize: 11.5, lineHeight: 1.5 }}>
-        Ao criar conta você concorda com os <a href="#" style={{color:'var(--text-muted)', textDecoration:'underline'}}>Termos</a> e <a href="#" style={{color:'var(--text-muted)', textDecoration:'underline'}}>Privacidade</a>.
+        Ao criar conta você concorda com os <Link href="/termos" style={{color:'var(--text-muted)', textDecoration:'underline'}}>Termos</Link> e <Link href="/privacidade" style={{color:'var(--text-muted)', textDecoration:'underline'}}>Privacidade</Link>.
       </p>
     </>
   );

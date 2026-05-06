@@ -24,6 +24,32 @@ export default function HistoricoPageClient({
   const [filter, setFilter] = useState("todos");
   const [query, setQuery] = useState("");
 
+  const exportContracts = () => {
+    const lines = [
+      ["id", "nome", "cliente", "tipo", "status", "valor_brl", "atualizado"],
+      ...filtered.map((contract) => [
+        contract.id,
+        contract.name,
+        contract.client,
+        contract.type,
+        contract.status,
+        contract.value.toString(),
+        contract.updated,
+      ]),
+    ];
+
+    const csv = lines
+      .map((line) => line.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(","))
+      .join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "lex-revision-contratos.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const filtered = useMemo(() => {
     return contracts.filter((contract) => {
       const matchesFilter = filter === "todos" ? true : contract.status === filter;
@@ -44,7 +70,7 @@ export default function HistoricoPageClient({
           </div>
         </div>
         <div className="actions">
-          <button className="btn btn-secondary">
+          <button className="btn btn-secondary" type="button" onClick={exportContracts}>
             <Icon name="download" size={14} />
             Exportar
           </button>
@@ -85,10 +111,6 @@ export default function HistoricoPageClient({
             {label}
           </span>
         ))}
-        <button className="btn btn-ghost btn-sm" style={{ marginLeft: "auto" }}>
-          <Icon name="filter" size={13} />
-          Filtros
-        </button>
       </div>
 
       <div className="table-wrap">

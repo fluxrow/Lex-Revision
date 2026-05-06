@@ -1,6 +1,7 @@
 "use client";
 
 import { startTransition, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import SignOutButton from "@/components/auth/SignOutButton";
@@ -521,10 +522,10 @@ export default function ConfigPageClient({
       {tab === "integracao" && (
         <div className="grid grid-2">
           {[
-            ["Google Drive", "Salve contratos no Drive", "folder", true],
-            ["Clicksign", "Assinatura digital avançada", "pen", true],
+            ["Google Drive", "Camada de produto ainda sem painel de conexão dedicado", "folder", false],
+            ["Clicksign", "Webhook e estrutura backend prontos; UI de envio dedicado em evolução", "pen", true],
             ["Stripe", canManageBilling ? "Cobrança e portal ativos" : "Conecte a cobrança para autoatendimento", "card", canManageBilling],
-            ["WhatsApp", "Envie contratos por mensagem", "send", false],
+            ["WhatsApp", "Canal planejado para fases futuras do rollout", "send", false],
           ].map(([name, description, icon, enabled], index) => (
             <div key={index} className="card row" style={{ gap: 14 }}>
               <div style={{ width: 44, height: 44, borderRadius: 10, background: "var(--surface-2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -537,9 +538,9 @@ export default function ConfigPageClient({
               {name === "Stripe" && canManageBilling ? (
                 <CustomerPortalButton variant="secondary" size="sm" label="Abrir portal" />
               ) : (
-                <button className={`btn ${enabled ? "btn-secondary" : "btn-primary"} btn-sm`}>
-                  {enabled ? "Conectado" : "Conectar"}
-                </button>
+                <span className={`chip ${enabled ? "chip-green" : "chip-amber"}`}>
+                  {enabled ? "Backend disponível" : "Painel em evolução"}
+                </span>
               )}
             </div>
           ))}
@@ -758,11 +759,12 @@ export default function ConfigPageClient({
           <div className="card">
             <div className="card-title">Autenticação</div>
             <div className="card-sub">Senha e 2FA</div>
-            <button className="btn btn-secondary" style={{ width: "100%", marginBottom: 8 }}>Alterar senha</button>
-            <button className="btn btn-secondary" style={{ width: "100%" }}>
-              <Icon name="shield" size={14} />
-              Ativar 2FA
-            </button>
+            <Link href="/recuperar-senha" className="btn btn-secondary" style={{ width: "100%", marginBottom: 8, textDecoration: "none", display: "inline-flex", justifyContent: "center" }}>
+              Alterar senha
+            </Link>
+            <div className="muted" style={{ fontSize: 12 }}>
+              MFA/2FA entra na próxima rodada de segurança. Por enquanto, o fluxo real disponível é a redefinição de senha por e-mail.
+            </div>
           </div>
           <div className="card">
             <div className="card-title">Sessões ativas</div>

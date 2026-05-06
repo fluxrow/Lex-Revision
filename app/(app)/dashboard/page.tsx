@@ -25,7 +25,7 @@ export default async function Dashboard() {
           </div>
         </div>
         <div className="actions">
-          <button className="btn btn-secondary"><Icon name="upload" size={15}/>Importar</button>
+          <Link href="/novo/upload" className="btn btn-secondary" style={{ textDecoration: "none" }}><Icon name="upload" size={15}/>Importar</Link>
           <Link href="/novo" className="btn btn-primary" style={{textDecoration: 'none'}}><Icon name="plus" size={15}/>Novo contrato</Link>
         </div>
       </div>
@@ -126,8 +126,8 @@ export default async function Dashboard() {
               </span>
             </div>
             <div className="row" style={{gap: 8}}>
-              <button className="btn btn-primary btn-sm">Revisar</button>
-              <button className="btn btn-ghost btn-sm">Depois</button>
+              <Link href="/novo/ia" className="btn btn-primary btn-sm" style={{ textDecoration: "none" }}>Revisar</Link>
+              <Link href="/historico" className="btn btn-ghost btn-sm" style={{ textDecoration: "none" }}>Depois</Link>
             </div>
           </div>
 

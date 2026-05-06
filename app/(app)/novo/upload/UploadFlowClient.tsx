@@ -522,7 +522,9 @@ function ReviewStage({
               <Icon name={addedClause ? "check" : "plus"} size={13} />
               {addedClause ? "Adicionada" : "Adicionar"}
             </button>
-            <button className="btn btn-ghost btn-sm">Ver outras</button>
+            <Link href="/novo/ia" className="btn btn-ghost btn-sm" style={{ textDecoration: "none" }}>
+              Ver outras
+            </Link>
           </div>
         </div>
 
@@ -533,14 +535,17 @@ function ReviewStage({
             <Icon name="file" size={16} />
             {saving ? "Salvando..." : "Salvar no histórico"}
           </button>
-          <button className="btn btn-secondary" style={{ width: "100%", marginBottom: 8 }}>
-            <Icon name="download" size={15} />
-            Exportar PDF
-          </button>
-          <button className="btn btn-ghost" style={{ width: "100%" }}>
+          <div className="muted" style={{ fontSize: 12, marginBottom: 8 }}>
+            Depois de salvar, o rascunho entra no histórico real. A exportação final e o envio dedicado para assinatura ficam na próxima etapa operacional.
+          </div>
+          <Link href="/historico" className="btn btn-secondary" style={{ width: "100%", marginBottom: 8, textDecoration: "none", display: "inline-flex", justifyContent: "center" }}>
+            <Icon name="history" size={15} />
+            Ir para histórico
+          </Link>
+          <Link href="/assinaturas" className="btn btn-ghost" style={{ width: "100%", textDecoration: "none", display: "inline-flex", justifyContent: "center" }}>
             <Icon name="pen" size={15} />
-            Enviar para assinatura
-          </button>
+            Ver fila de assinaturas
+          </Link>
         </div>
 
         <div className="row sp-between">
