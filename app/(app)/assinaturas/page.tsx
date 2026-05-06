@@ -54,7 +54,13 @@ export default async function AssinaturasPage() {
             <div key={signature.id} className="card" style={{ padding: 0 }}>
               <div className="row sp-between" style={{ padding: "18px 20px", borderBottom: "1px solid var(--border)" }}>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: 15 }}>{signature.contract}</div>
+                  {signature.contractId ? (
+                    <Link href={`/historico/${signature.contractId}`} style={{ fontWeight: 700, fontSize: 15, textDecoration: "none" }}>
+                      {signature.contract}
+                    </Link>
+                  ) : (
+                    <div style={{ fontWeight: 700, fontSize: 15 }}>{signature.contract}</div>
+                  )}
                   <div className="muted" style={{ fontSize: 12, marginTop: 3 }}>
                     {signature.progress} de {signature.total} assinaturas · {signature.provider}
                   </div>

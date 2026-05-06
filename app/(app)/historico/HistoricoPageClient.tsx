@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import Icon from "@/components/ui/Icon";
 import { STATUS_LABELS, fmtBRL, fmtDate } from "@/lib/data";
@@ -21,6 +22,7 @@ export default function HistoricoPageClient({
 }: {
   contracts: ContractListItem[];
 }) {
+  const router = useRouter();
   const [filter, setFilter] = useState("todos");
   const [query, setQuery] = useState("");
 
@@ -127,7 +129,17 @@ export default function HistoricoPageClient({
           </thead>
           <tbody>
             {filtered.map((contract) => (
-              <tr key={contract.id}>
+              <tr
+                key={contract.id}
+                onClick={() => router.push(`/historico/${contract.id}`)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    router.push(`/historico/${contract.id}`);
+                  }
+                }}
+                tabIndex={0}
+              >
                 <td>
                   <div style={{ fontWeight: 600 }}>{contract.name}</div>
                   <div className="dim mono" style={{ fontSize: 11, marginTop: 2 }}>
@@ -144,7 +156,7 @@ export default function HistoricoPageClient({
                 </td>
                 <td className="muted">{fmtDate(contract.updated)}</td>
                 <td>
-                  <Icon name="more" size={15} style={{ color: "var(--text-dim)" }} />
+                  <Icon name="chevron-right" size={15} style={{ color: "var(--text-dim)" }} />
                 </td>
               </tr>
             ))}
