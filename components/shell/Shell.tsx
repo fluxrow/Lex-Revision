@@ -108,11 +108,11 @@ export function Topbar({ title, sub, actions }: { title: string, sub?: string, a
         <div className="topbar-title">{title}</div>
         {sub && <div className="muted" style={{fontSize:12, marginTop:2}}>{sub}</div>}
       </div>
-      <div className="search-box">
+      <Link href="/historico" className="search-box" style={{ textDecoration: "none", color: "inherit" }}>
         <Icon name="search" size={15}/>
-        <input placeholder="Buscar contratos, clientes, modelos..."/>
-        <span className="kbd">⌘K</span>
-      </div>
+        <span className="muted" style={{ flex: 1, fontSize: 13 }}>Buscar contratos, clientes, modelos...</span>
+        <span className="kbd">Histórico</span>
+      </Link>
       <div className="topbar-actions">
         {actions}
         <button className="btn btn-ghost btn-icon" title="Alternar tema" onClick={toggleTheme}>
