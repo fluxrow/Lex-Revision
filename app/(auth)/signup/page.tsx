@@ -26,7 +26,11 @@ function SignupPageInner() {
   const voucherCode = searchParams.get("voucher");
   const initialEmail = searchParams.get("email") || "";
   const activationRequired = searchParams.get("activation") === "required";
-  const supabaseSetupRequired = searchParams.get("setup") === "supabase";
+  const hasClientSupabaseEnv =
+    Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()) &&
+    Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim());
+  const supabaseSetupRequired =
+    searchParams.get("setup") === "supabase" && !hasClientSupabaseEnv;
 
   const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
@@ -95,7 +99,7 @@ function SignupPageInner() {
         throw new Error(signInError.message);
       }
 
-      router.replace("/dashboard");
+      window.location.assign("/dashboard");
     } catch (err: any) {
       setError(
         isSupabaseEnvError(err)

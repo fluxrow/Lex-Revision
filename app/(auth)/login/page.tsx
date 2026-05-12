@@ -6,7 +6,7 @@ import {
   isSupabaseEnvError,
 } from "@/lib/supabase/env";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
 export default function LoginPage() {
@@ -18,11 +18,14 @@ export default function LoginPage() {
 }
 
 function LoginPageInner() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const signedOut = searchParams.get("signed_out") === "1";
   const billingInactive = searchParams.get("billing") === "inactive";
-  const supabaseSetupRequired = searchParams.get("setup") === "supabase";
+  const hasClientSupabaseEnv =
+    Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()) &&
+    Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim());
+  const supabaseSetupRequired =
+    searchParams.get("setup") === "supabase" && !hasClientSupabaseEnv;
   const previewModeEnabled = process.env.NEXT_PUBLIC_LEX_PREVIEW_ADMIN_ENABLED === "1";
   const previewAdminEmail = process.env.NEXT_PUBLIC_LEX_PREVIEW_ADMIN_EMAIL?.trim() || "admin@preview.lex";
   const googleAuthEnabled = process.env.NEXT_PUBLIC_SUPABASE_GOOGLE_ENABLED === "1";
@@ -59,7 +62,7 @@ function LoginPageInner() {
           return;
         }
 
-        router.push("/dashboard");
+        window.location.assign("/dashboard");
         return;
       }
 
@@ -74,7 +77,7 @@ function LoginPageInner() {
       if (error) {
         setError(error.message);
       } else {
-        router.push("/dashboard");
+        window.location.assign("/dashboard");
       }
     } catch (err: any) {
       setError(
