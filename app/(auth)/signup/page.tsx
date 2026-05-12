@@ -33,6 +33,7 @@ function SignupPageInner() {
     searchParams.get("setup") === "supabase" && !hasClientSupabaseEnv;
 
   const [email, setEmail] = useState(initialEmail);
+  const [voucherInput, setVoucherInput] = useState(voucherCode || "");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -46,7 +47,9 @@ function SignupPageInner() {
     setError(null);
 
     try {
-      if (!sessionId && !voucherCode) {
+      const effectiveVoucherCode = voucherCode || voucherInput.trim().toUpperCase() || null;
+
+      if (!sessionId && !effectiveVoucherCode) {
         throw new Error("Finalize o checkout da LP ou use um voucher valido para liberar seu acesso.");
       }
 
@@ -66,8 +69,8 @@ function SignupPageInner() {
                 company,
               }
             : voucherCode
-              ? {
-                  voucherCode,
+            ? {
+                  voucherCode: effectiveVoucherCode,
                   email,
                   password,
                   firstName,
@@ -176,6 +179,18 @@ function SignupPageInner() {
           <label className="field-label">E-mail profissional</label>
           <input className="input" type="email" placeholder="voce@seuescritorio.com.br" value={email} onChange={e => setEmail(e.target.value)} disabled={loading} />
         </div>
+        {!sessionId ? (
+          <div className="field">
+            <label className="field-label">Voucher de acesso</label>
+            <input
+              className="input"
+              placeholder="Ex: LEX-AB12CD34"
+              value={voucherInput}
+              onChange={e => setVoucherInput(e.target.value.toUpperCase())}
+              disabled={loading || Boolean(voucherCode)}
+            />
+          </div>
+        ) : null}
         <div className="field">
           <label className="field-label">Senha</label>
           <input className="input" type="password" placeholder="Mínimo 8 caracteres" value={password} onChange={e => setPassword(e.target.value)} disabled={loading} />
@@ -194,7 +209,7 @@ function SignupPageInner() {
 
       {!sessionId && !voucherCode && (
         <p className="muted" style={{ textAlign: 'center', marginTop: 14, fontSize: 12.5 }}>
-          Esta tela depende de um checkout valido. Se ainda nao contratou, volte para a <Link href="/#precos" style={{color:'var(--accent)', fontWeight: 600}}>LP e escolha um plano</Link>.
+          Você pode ativar com um voucher ou com um checkout válido. Se ainda nao contratou, volte para a <Link href="/#precos" style={{color:'var(--accent)', fontWeight: 600}}>LP e escolha um plano</Link>.
         </p>
       )}
 

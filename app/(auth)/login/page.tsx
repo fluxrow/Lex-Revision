@@ -6,8 +6,8 @@ import {
   isSupabaseEnvError,
 } from "@/lib/supabase/env";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 
 export default function LoginPage() {
   return (
@@ -18,6 +18,7 @@ export default function LoginPage() {
 }
 
 function LoginPageInner() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const signedOut = searchParams.get("signed_out") === "1";
   const billingInactive = searchParams.get("billing") === "inactive";
@@ -37,6 +38,17 @@ function LoginPageInner() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!hasClientSupabaseEnv || searchParams.get("setup") !== "supabase") {
+      return;
+    }
+
+    const nextParams = new URLSearchParams(searchParams.toString());
+    nextParams.delete("setup");
+    const nextQuery = nextParams.toString();
+    router.replace(nextQuery ? `/login?${nextQuery}` : "/login");
+  }, [hasClientSupabaseEnv, router, searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
