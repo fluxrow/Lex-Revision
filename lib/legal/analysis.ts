@@ -101,6 +101,7 @@ export function buildReviewFallback(analysis: ContractAnalysis) {
       trecho: "Clausula nao localizada na analise heuristica.",
       motivo: clause.guidance,
       sugestao: clause.sampleText,
+      legalBasis: undefined,
     })),
     ...analysis.suspiciousFindings,
   ];
