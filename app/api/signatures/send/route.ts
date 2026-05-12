@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { createClicksignSignatureRequest, hasClicksignConfig } from "@/lib/clicksign";
 import { getCurrentAccount } from "@/lib/auth/account";
 import { createClient } from "@/lib/supabase/server";
 
@@ -33,10 +34,20 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!hasClicksignConfig()) {
+      return NextResponse.json(
+        {
+          error:
+            "A Clicksign ainda não foi configurada neste ambiente. Preencha CLICKSIGN_ACCESS_TOKEN no Vercel para liberar assinaturas reais.",
+        },
+        { status: 503 }
+      );
+    }
+
     const supabase = await createClient();
     const { data: contract, error: contractError } = await supabase
       .from("contracts")
-      .select("id, name, status, organization_id")
+      .select("id, name, status, organization_id, body_md, body_html")
       .eq("id", payload.contractId)
       .maybeSingle();
 
@@ -64,16 +75,27 @@ export async function POST(request: Request) {
       );
     }
 
+    const clicksignRequest = await createClicksignSignatureRequest({
+      contractName: contract.name,
+      contractBody: contract.body_md || contract.body_html || contract.name,
+      signers: payload.signers,
+    });
+
     const { data: signatureRequest, error: signatureRequestError } = await supabase
       .from("signature_requests")
       .insert({
         contract_id: payload.contractId,
         provider: "clicksign",
-        status: "queued",
+        external_id: clicksignRequest.documentKey,
+        status: "sent",
         metadata: {
-          dispatch_mode: "internal_queue",
+          dispatch_mode: "provider_clicksign_v1",
           created_via: "contract_detail",
           requested_by: account.user.email || account.user.id,
+          document_key: clicksignRequest.documentKey,
+          document_path: clicksignRequest.documentPath,
+          file_name: clicksignRequest.fileName,
+          signer_count: clicksignRequest.signers.length,
         },
       })
       .select("id, provider, status, sent_at")
@@ -84,12 +106,13 @@ export async function POST(request: Request) {
     }
 
     const { error: signersError } = await supabase.from("signers").insert(
-      payload.signers.map((signer, index) => ({
+      clicksignRequest.signers.map((signer, index) => ({
         signature_request_id: signatureRequest.id,
         name: signer.name,
         email: signer.email,
         document: signer.document || null,
         status: "pending",
+        signature_url: signer.signatureUrl,
         position: index,
       }))
     );
@@ -120,7 +143,8 @@ export async function POST(request: Request) {
         contract_id: payload.contractId,
         signers_count: payload.signers.length,
         provider: "clicksign",
-        dispatch_mode: "internal_queue",
+        dispatch_mode: "provider_clicksign_v1",
+        document_key: clicksignRequest.documentKey,
       },
     });
 
@@ -132,9 +156,9 @@ export async function POST(request: Request) {
         status: signatureRequest.status,
         sentAt: signatureRequest.sent_at,
       },
-      mode: "internal_queue",
+      mode: "provider_clicksign_v1",
       message:
-        "Fluxo de assinatura criado no Lex. O acompanhamento já está ativo; o disparo externo do provider entra na próxima camada de integração.",
+        "Fluxo de assinatura enviado pela Clicksign. O Lex já está acompanhando o status real dos signatários.",
     });
   } catch (error: any) {
     return NextResponse.json(

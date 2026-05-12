@@ -84,7 +84,7 @@ export default function SendForSignatureCard({
     <div className="card">
       <div className="card-title">Iniciar assinatura</div>
       <div className="card-sub">
-        Defina quem precisa assinar. O Lex já cria o fluxo interno e libera o acompanhamento do status.
+        Defina quem precisa assinar. O Lex envia o contrato para a Clicksign e acompanha o status real da assinatura.
       </div>
 
       <div className="col" style={{ gap: 12 }}>
@@ -150,7 +150,7 @@ export default function SendForSignatureCard({
         </button>
         <button className="btn btn-primary" type="button" onClick={handleSubmit} disabled={isSubmitting}>
           <Icon name="send" size={14} />
-          {isSubmitting ? "Iniciando..." : "Criar fluxo de assinatura"}
+          {isSubmitting ? "Enviando..." : "Enviar para assinatura"}
         </button>
       </div>
 
