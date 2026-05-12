@@ -1,15 +1,15 @@
 import { randomBytes } from "crypto";
 
 import { NextResponse } from "next/server";
+import { type SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
 import { getCurrentAccount } from "@/lib/auth/account";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
-  getSupabaseAdminSetupMessage,
-  hasAdminSupabaseEnv,
   isSupabaseEnvError,
 } from "@/lib/supabase/env";
+import { createClient as createSessionClient } from "@/lib/supabase/server";
 
 const createVoucherSchema = z.object({
   recipientName: z.string().trim().min(2),
@@ -41,19 +41,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Apenas owner ou admin podem emitir vouchers." }, { status: 403 });
     }
 
-    if (!hasAdminSupabaseEnv()) {
-      return NextResponse.json({ error: getSupabaseAdminSetupMessage() }, { status: 503 });
-    }
-
-    const supabaseAdmin = createAdminClient();
-    const code = await generateUniqueVoucherCode(supabaseAdmin);
+    const supabase = account.isPreview
+      ? createAdminClient()
+      : await createSessionClient();
+    const code = await generateUniqueVoucherCode(supabase);
     const expiresAt = payload.expiresAt ? new Date(`${payload.expiresAt}T23:59:59.999Z`) : null;
 
     if (expiresAt && Number.isNaN(expiresAt.getTime())) {
       return NextResponse.json({ error: "Data de expiracao invalida." }, { status: 400 });
     }
 
-    const { data: voucher, error: voucherError } = await supabaseAdmin
+    const { data: voucher, error: voucherError } = await supabase
       .from("access_vouchers")
       .insert({
         issuer_organization_id: account.organization.id,
@@ -110,10 +108,10 @@ export async function POST(request: Request) {
   }
 }
 
-async function generateUniqueVoucherCode(supabaseAdmin: ReturnType<typeof createAdminClient>) {
+async function generateUniqueVoucherCode(supabase: SupabaseClient) {
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const code = `LEX-${randomBytes(4).toString("hex").toUpperCase()}`;
-    const { data: existingVoucher, error } = await supabaseAdmin
+    const { data: existingVoucher, error } = await supabase
       .from("access_vouchers")
       .select("id")
       .eq("code", code)
