@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import ContractDetailActions from "@/components/contracts/ContractDetailActions";
+import LegalReferenceExplorer from "@/components/legal/LegalReferenceExplorer";
 import SendForSignatureCard from "@/components/signatures/SendForSignatureCard";
 import SignatureLinkActions from "@/components/signatures/SignatureLinkActions";
 import Icon from "@/components/ui/Icon";
@@ -33,6 +34,11 @@ export default async function ContractDetailPage({
   const requiredMissingClauses = clauseCoverage.filter((clause) => clause.status === "missing_required").length;
   const recommendedMissingClauses = clauseCoverage.filter((clause) => clause.status === "missing_recommended").length;
   const clauseCoveragePercent = clauseCoverage.length > 0 ? Math.round((coveredClauses / clauseCoverage.length) * 100) : 0;
+  const suggestedLegalQueries = buildSuggestedLegalQueries({
+    contractType: contract.contractType,
+    clauseGaps: clauseGaps.map((clause) => clause.title),
+    findings: contract.analysis?.findings.map((finding) => finding.title) || [],
+  });
 
   return (
     <>
@@ -200,6 +206,13 @@ export default async function ContractDetailPage({
               </div>
             )}
           </div>
+
+          <LegalReferenceExplorer
+            initialQuery={suggestedLegalQueries[0] || contract.contractType}
+            contractType={normalizeContractTypeForSearch(contract.contractType)}
+            clauseIds={clauseGaps.map((clause) => clause.id)}
+            suggestedQueries={suggestedLegalQueries}
+          />
         </div>
 
         <div className="col" style={{ gap: 16 }}>
@@ -578,6 +591,48 @@ function formatDateTime(value: string) {
 
 function beautifySource(value: string) {
   return value.replaceAll("_", " ");
+}
+
+function normalizeContractTypeForSearch(value: string) {
+  const normalized = value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .trim();
+
+  if (normalized.includes("servic")) {
+    return "service_agreement";
+  }
+  if (normalized.includes("confidencial") || normalized.includes("nda")) {
+    return "nda";
+  }
+  if (normalized.includes("loca")) {
+    return "lease";
+  }
+  if (normalized.includes("trabalho") || normalized.includes("emprego")) {
+    return "employment";
+  }
+  return "general";
+}
+
+function buildSuggestedLegalQueries({
+  contractType,
+  clauseGaps,
+  findings,
+}: {
+  contractType: string;
+  clauseGaps: string[];
+  findings: string[];
+}) {
+  const suggestions = [
+    `${contractType} boa-fé objetiva`,
+    ...clauseGaps.slice(0, 2).map((item) => `${item} contrato`),
+    ...findings.slice(0, 1).map((item) => item),
+  ]
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  return Array.from(new Set(suggestions)).slice(0, 4);
 }
 
 function normalizeRiskKey(value: string) {
