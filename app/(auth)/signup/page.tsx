@@ -3,6 +3,8 @@ import { Suspense } from "react";
 import SignupPageClient from "@/components/auth/SignupPageClient";
 import { hasPublicSupabaseEnv } from "@/lib/supabase/env";
 
+export const dynamic = "force-dynamic";
+
 type SearchParamsInput =
   | Promise<Record<string, string | string[] | undefined>>
   | Record<string, string | string[] | undefined>;

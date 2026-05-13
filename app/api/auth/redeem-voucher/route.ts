@@ -9,10 +9,30 @@ const redeemVoucherSchema = z.object({
   voucherCode: z.string().trim().min(4),
   email: z.string().trim().email(),
   password: z.string().min(8),
-  firstName: z.string().trim().min(1),
-  lastName: z.string().trim().min(1),
+  firstName: z.string().trim().optional().default(""),
+  lastName: z.string().trim().optional().default(""),
   company: z.string().trim().optional().default(""),
 });
+
+function deriveNameParts(name: string) {
+  const cleaned = name
+    .trim()
+    .replace(/[._-]+/g, " ")
+    .replace(/\s+/g, " ");
+
+  if (!cleaned) {
+    return { firstName: "Tester", lastName: "Lex" };
+  }
+
+  const parts = cleaned.split(" ").filter(Boolean);
+  const firstName = parts[0] || "Tester";
+  const lastName = parts.slice(1).join(" ").trim();
+
+  return {
+    firstName,
+    lastName: lastName || "Lex",
+  };
+}
 
 export async function POST(request: Request) {
   try {
@@ -74,7 +94,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const fullName = `${payload.firstName} ${payload.lastName}`.trim();
+    const fallbackIdentity =
+      voucher.recipient_name?.trim() || normalizedEmail.split("@")[0] || "Tester Lex";
+    const derivedNames = deriveNameParts(fallbackIdentity);
+    const firstName = payload.firstName || derivedNames.firstName;
+    const lastName = payload.lastName || derivedNames.lastName;
+    const fullName = `${firstName} ${lastName}`.trim();
     const organizationName =
       payload.company.trim() ||
       voucher.company_name?.trim() ||
@@ -108,8 +133,8 @@ export async function POST(request: Request) {
         password: payload.password,
         email_confirm: true,
         user_metadata: {
-          first_name: payload.firstName,
-          last_name: payload.lastName,
+          first_name: firstName,
+          last_name: lastName,
           company: organizationName,
           access_source: "voucher",
           voucher_code: voucher.code,
