@@ -148,6 +148,10 @@ export function searchLegalReferences({
   limit?: number;
 }) {
   const normalizedQuery = normalize(query);
+  const queryTokens = normalizedQuery
+    .split(/\s+/)
+    .map((item) => item.trim())
+    .filter((item) => item.length >= 3);
   const normalizedClauses = new Set(clauseIds.map((item) => item.trim()).filter(Boolean));
   const normalizedContractType = normalizeContractType(contractType);
 
@@ -174,6 +178,9 @@ export function searchLegalReferences({
       if (haystack.includes(normalizedQuery)) {
         score += 8;
       }
+
+      const tokenMatches = queryTokens.filter((token) => haystack.includes(token)).length;
+      score += tokenMatches * 2;
 
       for (const keyword of entry.keywords) {
         if (normalizedQuery.includes(normalize(keyword)) || normalize(keyword).includes(normalizedQuery)) {
