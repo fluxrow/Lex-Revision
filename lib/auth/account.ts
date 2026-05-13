@@ -1,5 +1,3 @@
-import { cache } from "react";
-
 import { getPreviewAccountFromSession } from "@/lib/auth/preview";
 import { isSupabaseEnvError } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
@@ -31,7 +29,7 @@ export type CurrentAccount = {
   isPreview: boolean;
 };
 
-export const getCurrentAccount = cache(async (): Promise<CurrentAccount> => {
+export async function getCurrentAccount(): Promise<CurrentAccount> {
   let supabase;
 
   try {
@@ -108,4 +106,4 @@ export const getCurrentAccount = cache(async (): Promise<CurrentAccount> => {
     envMissing: false,
     isPreview: false,
   };
-});
+}
