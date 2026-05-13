@@ -10,6 +10,7 @@ type ManualSignaturePortalProps = {
   signerName: string;
   contractName: string;
   currentStatus: "pending" | "viewed" | "signed" | "refused";
+  requestStatus: "sent" | "partial" | "completed" | "cancelled";
 };
 
 export default function ManualSignaturePortal({
@@ -18,6 +19,7 @@ export default function ManualSignaturePortal({
   signerName,
   contractName,
   currentStatus,
+  requestStatus,
 }: ManualSignaturePortalProps) {
   const [status, setStatus] = useState(currentStatus);
   const [loadingAction, setLoadingAction] = useState<"approve" | "refuse" | null>(null);
@@ -27,6 +29,8 @@ export default function ManualSignaturePortal({
       ? "Sua aprovação já foi registrada."
       : currentStatus === "refused"
         ? "Esta solicitação já foi recusada."
+        : requestStatus === "cancelled"
+          ? "Esta rodada foi encerrada pelo responsável do contrato."
         : null
   );
 
@@ -67,7 +71,8 @@ export default function ManualSignaturePortal({
     }
   };
 
-  const isCompleted = status === "signed" || status === "refused";
+  const isCompleted =
+    status === "signed" || status === "refused" || requestStatus === "completed" || requestStatus === "cancelled";
 
   return (
     <div className="card">
@@ -84,12 +89,28 @@ export default function ManualSignaturePortal({
           marginBottom: 14,
           padding: "12px 14px",
           borderRadius: 12,
-          background: status === "signed" ? "var(--green-soft)" : status === "refused" ? "var(--red-soft)" : "var(--amber-soft)",
+          background:
+            requestStatus === "cancelled"
+              ? "var(--red-soft)"
+              : status === "signed"
+                ? "var(--green-soft)"
+                : status === "refused"
+                  ? "var(--red-soft)"
+                  : "var(--amber-soft)",
           border: "1px solid var(--border)",
-          color: status === "signed" ? "var(--green)" : status === "refused" ? "var(--red)" : "var(--amber)",
+          color:
+            requestStatus === "cancelled"
+              ? "var(--red)"
+              : status === "signed"
+                ? "var(--green)"
+                : status === "refused"
+                  ? "var(--red)"
+                  : "var(--amber)",
         }}
       >
-        {status === "signed"
+        {requestStatus === "cancelled"
+          ? "Rodada encerrada pelo responsável."
+          : status === "signed"
           ? "Aprovação registrada."
           : status === "refused"
             ? "Solicitação recusada."

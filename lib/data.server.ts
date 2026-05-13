@@ -823,6 +823,26 @@ function mapActivityLogEntry(entry: any) {
           ? `${signerName} recusou o contrato${signerEmail ? ` (${signerEmail})` : ""}.`
           : "Um signatário recusou esta rodada.",
       };
+    case "signature_request.cancelled":
+      return {
+        id: String(entry.id),
+        action,
+        resourceType: String(entry.resource_type || "signature_request"),
+        resourceId: entry.resource_id ? String(entry.resource_id) : null,
+        createdAt: String(entry.created_at || new Date().toISOString()),
+        title: "Rodada encerrada",
+        description: "O responsável encerrou esta rodada e devolveu o contrato para rascunho.",
+      };
+    case "signature_request.restarted":
+      return {
+        id: String(entry.id),
+        action,
+        resourceType: String(entry.resource_type || "signature_request"),
+        resourceId: entry.resource_id ? String(entry.resource_id) : null,
+        createdAt: String(entry.created_at || new Date().toISOString()),
+        title: "Nova rodada criada",
+        description: "Uma nova rodada foi aberta a partir da base de signatários desta assinatura.",
+      };
     default:
       return {
         id: String(entry.id),

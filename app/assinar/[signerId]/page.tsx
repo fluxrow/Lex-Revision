@@ -66,7 +66,11 @@ export default async function SignaturePortalPage({
     ? signatureRequest.contracts[0]
     : signatureRequest?.contracts;
 
-  if (!invalidLink && signer.status === "pending") {
+  if (
+    !invalidLink &&
+    signer.status === "pending" &&
+    ["sent", "partial"].includes(signatureRequest?.status || "")
+  ) {
     await admin
       .from("signers")
       .update({
@@ -139,6 +143,7 @@ export default async function SignaturePortalPage({
                 signerName={signer.name}
                 contractName={contract.name || "Contrato sem título"}
                 currentStatus={normalizeSignerStatus(signer.status)}
+                requestStatus={normalizeRequestStatus(signatureRequest.status)}
               />
             </div>
 
@@ -192,5 +197,16 @@ function normalizeSignerStatus(value: string | null | undefined) {
       return value;
     default:
       return "pending";
+  }
+}
+
+function normalizeRequestStatus(value: string | null | undefined) {
+  switch (value) {
+    case "partial":
+    case "completed":
+    case "cancelled":
+      return value;
+    default:
+      return "sent";
   }
 }

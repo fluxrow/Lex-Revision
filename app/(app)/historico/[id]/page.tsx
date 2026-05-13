@@ -5,6 +5,7 @@ import ContractDetailActions from "@/components/contracts/ContractDetailActions"
 import LegalReferenceExplorer from "@/components/legal/LegalReferenceExplorer";
 import SendForSignatureCard from "@/components/signatures/SendForSignatureCard";
 import SignatureLinkActions from "@/components/signatures/SignatureLinkActions";
+import SignatureRequestActions from "@/components/signatures/SignatureRequestActions";
 import Icon from "@/components/ui/Icon";
 import { getClicksignRuntimeStatus } from "@/lib/clicksign";
 import { fmtBRL, STATUS_LABELS } from "@/lib/data";
@@ -436,12 +437,10 @@ export default async function ContractDetailPage({
             <div className="card-sub">
               Acompanhe o envio e o progresso dos signatários vinculados a este contrato.
             </div>
-            {contract.signatureRequests.length === 0 || !hasOpenSignatureFlow ? (
+            {contract.signatureRequests.length === 0 ? (
               <div className="col" style={{ gap: 12 }}>
                 <div className="muted">
-                  {contract.signatureRequests.length === 0
-                    ? "Ainda não existe solicitação real de assinatura para este contrato."
-                    : "A última rodada de assinatura já foi encerrada. Você pode iniciar uma nova rodada para este contrato."}
+                  Ainda não existe solicitação real de assinatura para este contrato.
                 </div>
                 <SendForSignatureCard
                   contractId={contract.id}
@@ -456,6 +455,34 @@ export default async function ContractDetailPage({
               </div>
             ) : (
               <div className="col" style={{ gap: 12 }}>
+                {!hasOpenSignatureFlow ? (
+                  <div
+                    style={{
+                      padding: "12px 14px",
+                      borderRadius: 12,
+                      border: "1px solid var(--border)",
+                      background: "var(--amber-soft)",
+                      color: "var(--amber)",
+                    }}
+                  >
+                    A última rodada já foi encerrada. Você pode iniciar uma nova rodada com novos signatários
+                    ou reaproveitar a base de uma rodada anterior.
+                  </div>
+                ) : null}
+
+                {!hasOpenSignatureFlow ? (
+                  <SendForSignatureCard
+                    contractId={contract.id}
+                    deliveryMode={signatureDeliveryMode}
+                    providerEnvironment={clicksignStatus.environment}
+                    initialSigner={{
+                      name: contract.client?.name || "",
+                      email: contract.client?.email === "—" ? "" : contract.client?.email || "",
+                      document: contract.client?.document === "—" ? "" : contract.client?.document || "",
+                    }}
+                  />
+                ) : null}
+
                 {contract.signatureRequests.map((request) => {
                   const signedCount = request.signers.filter((signer) => signer.status === "signed").length;
                   const total = request.signers.length;
@@ -500,6 +527,17 @@ export default async function ContractDetailPage({
                           </div>
                         ))}
                       </div>
+                      <SignatureRequestActions
+                        requestId={request.id}
+                        provider={request.provider}
+                        status={request.status}
+                        allowRestart={!hasOpenSignatureFlow}
+                        signerLinks={request.signers.map((signer) => ({
+                          name: signer.name,
+                          email: signer.email,
+                          signatureUrl: signer.signatureUrl,
+                        }))}
+                      />
                     </div>
                   );
                 })}
