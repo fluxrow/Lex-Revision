@@ -4,14 +4,18 @@ import Icon from "@/components/ui/Icon";
 import { getAccountOverview } from "@/lib/account/overview";
 import { getCurrentAccount } from "@/lib/auth/account";
 import { STATUS_LABELS, fmtBRL, fmtDate } from "@/lib/data";
-import { getContracts } from "@/lib/data.server";
+import { getContractsFeed } from "@/lib/data.server";
 import Link from "next/link";
 
 export default async function Dashboard() {
   const account = await getCurrentAccount();
   const overview = await getAccountOverview();
-  const contracts = await getContracts();
-  const firstName = account.membership?.full_name?.split(" ")[0] || "Marina";
+  const contractsFeed = await getContractsFeed();
+  const contracts = contractsFeed.items;
+  const firstName =
+    account.membership?.full_name?.split(" ")[0] ||
+    account.user?.email?.split("@")[0] ||
+    "cliente";
   const planLabel = account.organization?.plan ? account.organization.plan.replace("_", " ") : "plano ativo";
   const pendingSteps = overview?.onboardingSteps.filter((step) => !step.complete).slice(0, 3) ?? [];
   
@@ -29,6 +33,33 @@ export default async function Dashboard() {
           <Link href="/novo" className="btn btn-primary" style={{textDecoration: 'none'}}><Icon name="plus" size={15}/>Novo contrato</Link>
         </div>
       </div>
+
+      {!account.isPreview && contractsFeed.isEmpty ? (
+        <div
+          className="card"
+          style={{
+            marginBottom: 24,
+            borderColor: "var(--accent-glow)",
+            background: "linear-gradient(135deg, var(--accent-soft), transparent)",
+          }}
+        >
+          <div className="card-title">Comece com dados reais</div>
+          <div className="card-sub" style={{ maxWidth: 720 }}>
+            Seu workspace já está ativo. Crie o primeiro contrato para substituir os placeholders de onboarding
+            por histórico, análise e assinatura reais.
+          </div>
+          <div className="row" style={{ gap: 10, marginTop: 16, flexWrap: "wrap" }}>
+            <Link href="/novo" className="btn btn-primary" style={{ textDecoration: "none" }}>
+              <Icon name="plus" size={14} />
+              Criar primeiro contrato
+            </Link>
+            <Link href="/novo/upload" className="btn btn-secondary" style={{ textDecoration: "none" }}>
+              <Icon name="upload" size={14} />
+              Importar modelo
+            </Link>
+          </div>
+        </div>
+      ) : null}
 
       {/* KPI cards */}
       <div className="grid grid-4" style={{marginBottom: 24}}>
@@ -85,17 +116,28 @@ export default async function Dashboard() {
           </div>
           <table className="table">
             <tbody>
-              {contracts.slice(0, 5).map(c => (
-                <tr key={c.id}>
-                  <td style={{width:'50%'}}>
-                    <div style={{fontWeight: 600}}>{c.name}</div>
-                    <div className="muted" style={{fontSize: 12, marginTop: 2}}>{c.client}</div>
+              {contracts.length > 0 ? (
+                contracts.slice(0, 5).map(c => (
+                  <tr key={c.id}>
+                    <td style={{width:'50%'}}>
+                      <div style={{fontWeight: 600}}>{c.name}</div>
+                      <div className="muted" style={{fontSize: 12, marginTop: 2}}>{c.client}</div>
+                    </td>
+                    <td><span className="mono muted" style={{fontSize:12.5}}>{fmtBRL(c.value)}</span></td>
+                    <td><span className={`chip ${STATUS_LABELS[c.status].chip}`}><span className="chip-dot"/>{STATUS_LABELS[c.status].label}</span></td>
+                    <td className="muted" style={{fontSize: 12}}>{fmtDate(c.updated)}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={4} style={{ padding: "28px 20px" }}>
+                    <div style={{ fontWeight: 600, marginBottom: 6 }}>Nenhum contrato criado ainda</div>
+                    <div className="muted" style={{ fontSize: 13, lineHeight: 1.5 }}>
+                      Assim que você criar ou importar o primeiro contrato, o histórico real aparece aqui.
+                    </div>
                   </td>
-                  <td><span className="mono muted" style={{fontSize:12.5}}>{fmtBRL(c.value)}</span></td>
-                  <td><span className={`chip ${STATUS_LABELS[c.status].chip}`}><span className="chip-dot"/>{STATUS_LABELS[c.status].label}</span></td>
-                  <td className="muted" style={{fontSize: 12}}>{fmtDate(c.updated)}</td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>

@@ -1,8 +1,14 @@
 import HistoricoPageClient from "@/app/(app)/historico/HistoricoPageClient";
-import { getContracts } from "@/lib/data.server";
+import { getContractsFeed } from "@/lib/data.server";
 
 export default async function HistoricoPage() {
-  const contracts = await getContracts();
+  const contractsFeed = await getContractsFeed();
 
-  return <HistoricoPageClient contracts={contracts} />;
+  return (
+    <HistoricoPageClient
+      contracts={contractsFeed.items}
+      isFallback={contractsFeed.isFallback}
+      isEmpty={contractsFeed.isEmpty}
+    />
+  );
 }

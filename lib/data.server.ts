@@ -5,6 +5,7 @@ import {
   buildReviewFallback,
 } from "@/lib/legal/analysis";
 import type { StructuredContractPayload } from "@/lib/contracts/ingestion";
+import { getCurrentAccount } from "@/lib/auth/account";
 import { createClient } from "@/lib/supabase/server";
 
 export type ClientSummary = {
@@ -114,7 +115,49 @@ export type ContractDetail = {
   isFallback: boolean;
 };
 
-export async function getContracts() {
+export type ContractListItem = {
+  id: string;
+  name: string;
+  client: string;
+  value: number;
+  status: string;
+  updated: string;
+  type: string;
+};
+
+export type ContractsFeed = {
+  items: ContractListItem[];
+  isFallback: boolean;
+  isEmpty: boolean;
+};
+
+export type TemplateListItem = {
+  id: string;
+  name: string;
+  cat: string;
+  uses: number;
+  updated: string;
+  vars: number;
+  accent: string;
+};
+
+export type TemplateCatalog = {
+  items: TemplateListItem[];
+  isFallback: boolean;
+  isEmpty: boolean;
+};
+
+export async function getContractsFeed(): Promise<ContractsFeed> {
+  const account = await getCurrentAccount();
+
+  if (account.isPreview) {
+    return {
+      items: MOCK_CONTRACTS,
+      isFallback: true,
+      isEmpty: false,
+    };
+  }
+
   try {
     const supabase = await createClient();
     const { data, error } = await supabase
@@ -122,11 +165,15 @@ export async function getContracts() {
       .select("*, clients(name)")
       .order("created_at", { ascending: false });
 
-    if (error || !data || data.length === 0) {
-      return MOCK_CONTRACTS;
+    if (error || !data) {
+      return {
+        items: [],
+        isFallback: false,
+        isEmpty: true,
+      };
     }
 
-    return data.map((contract: any) => ({
+    const items = data.map((contract: any) => ({
       id: contract.id,
       name: contract.name,
       client: contract.clients?.name || "Rascunho interno",
@@ -138,41 +185,88 @@ export async function getContracts() {
             ? "em_analise"
             : contract.status === "pending_signature"
               ? "aguardando"
-          : contract.status === "signed"
-            ? "assinado"
-            : "rascunho",
+              : contract.status === "signed"
+                ? "assinado"
+                : "rascunho",
       updated: contract.updated_at.split("T")[0],
       type: contract.contract_type || "Geral",
     }));
+
+    return {
+      items,
+      isFallback: false,
+      isEmpty: items.length === 0,
+    };
   } catch {
-    return MOCK_CONTRACTS;
+    return {
+      items: [],
+      isFallback: false,
+      isEmpty: true,
+    };
   }
 }
 
-export async function getTemplates() {
+export async function getContracts() {
+  return (await getContractsFeed()).items;
+}
+
+export async function getTemplatesCatalog(): Promise<TemplateCatalog> {
+  const account = await getCurrentAccount();
+
+  if (account.isPreview) {
+    return {
+      items: MOCK_TEMPLATES.map((template) => ({
+        ...template,
+        accent: template.accent,
+      })),
+      isFallback: true,
+      isEmpty: false,
+    };
+  }
+
   try {
     const supabase = await createClient();
     const { data, error } = await supabase
       .from("contract_templates")
       .select("*")
+      .order("is_global", { ascending: false })
+      .order("uses_count", { ascending: false })
       .order("created_at", { ascending: false });
 
-    if (error || !data || data.length === 0) {
-      return MOCK_TEMPLATES;
+    if (error || !data) {
+      return {
+        items: [],
+        isFallback: false,
+        isEmpty: true,
+      };
     }
 
-    return data.map((template: any) => ({
+    const items = data.map((template: any) => ({
       id: template.id,
       name: template.name,
       cat: template.category || "Geral",
       uses: template.uses_count || 0,
       updated: template.updated_at.split("T")[0],
-      vars: template.variables ? template.variables.length : 0,
-      accent: "#8FA3F5",
+      vars: Array.isArray(template.variables) ? template.variables.length : 0,
+      accent: getTemplateAccent(template.category, template.name),
     }));
+
+    return {
+      items,
+      isFallback: false,
+      isEmpty: items.length === 0,
+    };
   } catch {
-    return MOCK_TEMPLATES;
+    return {
+      items: [],
+      isFallback: false,
+      isEmpty: true,
+    };
   }
+}
+
+export async function getTemplates() {
+  return (await getTemplatesCatalog()).items;
 }
 
 export async function getTemplateById(templateId?: string | null) {
@@ -680,6 +774,25 @@ function fmtCurrencyValue(value: number) {
     style: "currency",
     currency: "BRL",
   });
+}
+
+function getTemplateAccent(category?: string | null, name?: string | null) {
+  const base = `${category || ""} ${name || ""}`.toLowerCase();
+
+  if (base.includes("imobili")) {
+    return "#f5c46b";
+  }
+  if (base.includes("corporativo") || base.includes("nda") || base.includes("confidencial")) {
+    return "#7ce0a6";
+  }
+  if (base.includes("trabalhista") || base.includes("rescis")) {
+    return "#f08a8a";
+  }
+  if (base.includes("jurídico") || base.includes("juridico") || base.includes("procura") || base.includes("acordo")) {
+    return "#A8B7F8";
+  }
+
+  return "#8FA3F5";
 }
 
 function isRecord(value: unknown): value is Record<string, any> {

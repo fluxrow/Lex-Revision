@@ -19,8 +19,12 @@ type ContractListItem = {
 
 export default function HistoricoPageClient({
   contracts,
+  isFallback,
+  isEmpty,
 }: {
   contracts: ContractListItem[];
+  isFallback: boolean;
+  isEmpty: boolean;
 }) {
   const router = useRouter();
   const [filter, setFilter] = useState("todos");
@@ -83,6 +87,48 @@ export default function HistoricoPageClient({
         </div>
       </div>
 
+      {isFallback ? (
+        <div
+          className="card"
+          style={{
+            marginBottom: 18,
+            borderColor: "var(--amber)",
+            background: "linear-gradient(135deg, var(--amber-soft), transparent)",
+          }}
+        >
+          <div className="card-title">Dados de demonstração</div>
+          <div className="card-sub">
+            Este histórico está em preview. Para ver contratos reais, entre com uma conta ativa fora do modo demo.
+          </div>
+        </div>
+      ) : null}
+
+      {!isFallback && isEmpty ? (
+        <div
+          className="card"
+          style={{
+            marginBottom: 18,
+            borderColor: "var(--accent-glow)",
+            background: "linear-gradient(135deg, var(--accent-soft), transparent)",
+          }}
+        >
+          <div className="card-title">Seu histórico ainda está vazio</div>
+          <div className="card-sub">
+            Você já está no ambiente real. Crie ou importe o primeiro contrato para começar a preencher este histórico.
+          </div>
+          <div className="row" style={{ gap: 10, marginTop: 16, flexWrap: "wrap" }}>
+            <Link href="/novo" className="btn btn-primary" style={{ textDecoration: "none" }}>
+              <Icon name="plus" size={14} />
+              Criar primeiro contrato
+            </Link>
+            <Link href="/novo/upload" className="btn btn-secondary" style={{ textDecoration: "none" }}>
+              <Icon name="upload" size={14} />
+              Importar modelo
+            </Link>
+          </div>
+        </div>
+      ) : null}
+
       <div className="row" style={{ gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
         <div className="search-box" style={{ maxWidth: 340, flex: "1 1 260px" }}>
           <Icon name="search" size={14} />
@@ -128,38 +174,55 @@ export default function HistoricoPageClient({
             </tr>
           </thead>
           <tbody>
-            {filtered.map((contract) => (
-              <tr
-                key={contract.id}
-                onClick={() => router.push(`/historico/${contract.id}`)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    router.push(`/historico/${contract.id}`);
-                  }
-                }}
-                tabIndex={0}
-              >
-                <td>
-                  <div style={{ fontWeight: 600 }}>{contract.name}</div>
-                  <div className="dim mono" style={{ fontSize: 11, marginTop: 2 }}>
-                    #{contract.id}
+            {filtered.length > 0 ? (
+              filtered.map((contract) => (
+                <tr
+                  key={contract.id}
+                  onClick={() => router.push(`/historico/${contract.id}`)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      router.push(`/historico/${contract.id}`);
+                    }
+                  }}
+                  tabIndex={0}
+                >
+                  <td>
+                    <div style={{ fontWeight: 600 }}>{contract.name}</div>
+                    <div className="dim mono" style={{ fontSize: 11, marginTop: 2 }}>
+                      #{contract.id}
+                    </div>
+                  </td>
+                  <td>{contract.client}</td>
+                  <td className="mono">{fmtBRL(contract.value)}</td>
+                  <td>
+                    <span className={`chip ${STATUS_LABELS[contract.status]?.chip || ""}`}>
+                      <span className="chip-dot" />
+                      {STATUS_LABELS[contract.status]?.label || contract.status}
+                    </span>
+                  </td>
+                  <td className="muted">{fmtDate(contract.updated)}</td>
+                  <td>
+                    <Icon name="chevron-right" size={15} style={{ color: "var(--text-dim)" }} />
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={6} style={{ padding: "26px 18px" }}>
+                  <div style={{ fontWeight: 600, marginBottom: 6 }}>
+                    {query || filter !== "todos"
+                      ? "Nenhum contrato corresponde ao filtro atual"
+                      : "Nenhum contrato encontrado"}
+                  </div>
+                  <div className="muted" style={{ fontSize: 13, lineHeight: 1.5 }}>
+                    {query || filter !== "todos"
+                      ? "Ajuste os filtros ou limpe a busca para ver mais resultados."
+                      : "Quando você criar os primeiros contratos reais, eles aparecem aqui automaticamente."}
                   </div>
                 </td>
-                <td>{contract.client}</td>
-                <td className="mono">{fmtBRL(contract.value)}</td>
-                <td>
-                  <span className={`chip ${STATUS_LABELS[contract.status]?.chip || ""}`}>
-                    <span className="chip-dot" />
-                    {STATUS_LABELS[contract.status]?.label || contract.status}
-                  </span>
-                </td>
-                <td className="muted">{fmtDate(contract.updated)}</td>
-                <td>
-                  <Icon name="chevron-right" size={15} style={{ color: "var(--text-dim)" }} />
-                </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>
