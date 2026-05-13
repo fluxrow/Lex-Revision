@@ -27,7 +27,12 @@ export default async function ContractDetailPage({
   }
 
   const riskLabel = RISK_LABELS[contract.analysis?.overallRisk || "medium"];
-  const clauseGaps = contract.analysis?.clauseCoverage.filter((clause) => clause.status !== "present") || [];
+  const clauseCoverage = contract.analysis?.clauseCoverage || [];
+  const clauseGaps = clauseCoverage.filter((clause) => clause.status !== "present");
+  const coveredClauses = clauseCoverage.filter((clause) => clause.status === "present").length;
+  const requiredMissingClauses = clauseCoverage.filter((clause) => clause.status === "missing_required").length;
+  const recommendedMissingClauses = clauseCoverage.filter((clause) => clause.status === "missing_recommended").length;
+  const clauseCoveragePercent = clauseCoverage.length > 0 ? Math.round((coveredClauses / clauseCoverage.length) * 100) : 0;
 
   return (
     <>
@@ -238,6 +243,77 @@ export default async function ContractDetailPage({
                   <div style={{ fontWeight: 600, lineHeight: 1.55 }}>{contract.analysis.summary}</div>
                 </div>
 
+                {clauseCoverage.length > 0 ? (
+                  <div
+                    style={{
+                      padding: "14px 16px",
+                      borderRadius: 12,
+                      border: "1px solid var(--border)",
+                      background: "var(--surface-2)",
+                    }}
+                  >
+                    <div className="row sp-between" style={{ alignItems: "center", gap: 12, marginBottom: 10 }}>
+                      <div>
+                        <div style={{ fontWeight: 700 }}>Cobertura de cláusulas</div>
+                        <div className="muted" style={{ fontSize: 12.5, marginTop: 4 }}>
+                          Cobertura: {coveredClauses}/{clauseCoverage.length} cláusulas recomendadas presentes
+                        </div>
+                      </div>
+                      <span
+                        className={`chip ${
+                          clauseCoveragePercent >= 80
+                            ? "chip-green"
+                            : clauseCoveragePercent >= 50
+                              ? "chip-amber"
+                              : "chip-red"
+                        }`}
+                      >
+                        {clauseCoveragePercent}%
+                      </span>
+                    </div>
+
+                    <div
+                      aria-hidden="true"
+                      style={{
+                        width: "100%",
+                        height: 10,
+                        borderRadius: 999,
+                        background: "var(--surface-3)",
+                        overflow: "hidden",
+                        marginBottom: 12,
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: `${clauseCoveragePercent}%`,
+                          height: "100%",
+                          borderRadius: 999,
+                          background:
+                            clauseCoveragePercent >= 80
+                              ? "var(--green)"
+                              : clauseCoveragePercent >= 50
+                                ? "var(--amber)"
+                                : "var(--red)",
+                        }}
+                      />
+                    </div>
+
+                    <div className="grid grid-3">
+                      <CoverageStat label="Presentes" value={String(coveredClauses)} tone="var(--green)" />
+                      <CoverageStat
+                        label="Obrigatórias ausentes"
+                        value={String(requiredMissingClauses)}
+                        tone="var(--red)"
+                      />
+                      <CoverageStat
+                        label="Recomendadas ausentes"
+                        value={String(recommendedMissingClauses)}
+                        tone="var(--amber)"
+                      />
+                    </div>
+                  </div>
+                ) : null}
+
                 {contract.analysis.findings.length > 0 ? (
                   <div className="col" style={{ gap: 10 }}>
                     {contract.analysis.findings.slice(0, 4).map((finding, index) => (
@@ -433,6 +509,32 @@ function MetaRow({ label, value }: { label: string; value: string }) {
     <div className="row sp-between" style={{ gap: 12, alignItems: "flex-start" }}>
       <div className="dim" style={{ fontSize: 12.5 }}>{label}</div>
       <div style={{ textAlign: "right", fontWeight: 600, maxWidth: "60%" }}>{value}</div>
+    </div>
+  );
+}
+
+function CoverageStat({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone: string;
+}) {
+  return (
+    <div
+      style={{
+        padding: "12px 14px",
+        borderRadius: 12,
+        border: "1px solid var(--border)",
+        background: "var(--bg-elevated)",
+      }}
+    >
+      <div className="dim" style={{ fontSize: 11.5, marginBottom: 6 }}>
+        {label}
+      </div>
+      <div style={{ fontWeight: 800, fontSize: 22, color: tone }}>{value}</div>
     </div>
   );
 }
