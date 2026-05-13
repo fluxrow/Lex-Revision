@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { createClicksignSignatureRequest, hasClicksignConfig } from "@/lib/clicksign";
 import { getCurrentAccount } from "@/lib/auth/account";
+import { buildManualSignatureUrl } from "@/lib/signatures/manual";
 import { createClient } from "@/lib/supabase/server";
 
 const sendSignatureSchema = z.object({
@@ -34,17 +35,8 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!hasClicksignConfig()) {
-      return NextResponse.json(
-        {
-          error:
-            "A Clicksign ainda não foi configurada neste ambiente. Preencha CLICKSIGN_ACCESS_TOKEN no Vercel para liberar assinaturas reais.",
-        },
-        { status: 503 }
-      );
-    }
-
     const supabase = await createClient();
+    const origin = new URL(request.url).origin;
     const { data: contract, error: contractError } = await supabase
       .from("contracts")
       .select("id, name, status, organization_id, body_md, body_html")
@@ -73,6 +65,100 @@ export async function POST(request: Request) {
         },
         { status: 409 }
       );
+    }
+
+    if (!hasClicksignConfig()) {
+      const { data: signatureRequest, error: signatureRequestError } = await supabase
+        .from("signature_requests")
+        .insert({
+          contract_id: payload.contractId,
+          provider: "lex_beta",
+          status: "sent",
+          metadata: {
+            dispatch_mode: "manual_beta_v1",
+            created_via: "contract_detail",
+            requested_by: account.user.email || account.user.id,
+            signer_count: payload.signers.length,
+            delivery_origin: origin,
+          },
+        })
+        .select("id, provider, status, sent_at")
+        .single();
+
+      if (signatureRequestError || !signatureRequest) {
+        throw signatureRequestError || new Error("Não foi possível iniciar a assinatura beta.");
+      }
+
+      const { data: createdSigners, error: signersError } = await supabase
+        .from("signers")
+        .insert(
+          payload.signers.map((signer, index) => ({
+            signature_request_id: signatureRequest.id,
+            name: signer.name,
+            email: signer.email,
+            document: signer.document || null,
+            status: "pending",
+            position: index,
+          }))
+        )
+        .select("id");
+
+      if (signersError || !createdSigners) {
+        throw signersError || new Error("Não foi possível criar os signatários do fluxo beta.");
+      }
+
+      for (const signer of createdSigners) {
+        const signatureUrl = buildManualSignatureUrl(origin, signer.id);
+        const { error: signatureUrlError } = await supabase
+          .from("signers")
+          .update({
+            signature_url: signatureUrl,
+          })
+          .eq("id", signer.id);
+
+        if (signatureUrlError) {
+          throw signatureUrlError;
+        }
+      }
+
+      const { error: contractUpdateError } = await supabase
+        .from("contracts")
+        .update({
+          status: "pending_signature",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", payload.contractId);
+
+      if (contractUpdateError) {
+        throw contractUpdateError;
+      }
+
+      await supabase.from("activity_logs").insert({
+        organization_id: account.organization.id,
+        user_id: account.user.id,
+        action: "signature_request.created",
+        resource_type: "signature_request",
+        resource_id: signatureRequest.id,
+        metadata: {
+          contract_id: payload.contractId,
+          signers_count: payload.signers.length,
+          provider: "lex_beta",
+          dispatch_mode: "manual_beta_v1",
+        },
+      });
+
+      return NextResponse.json({
+        ok: true,
+        request: {
+          id: signatureRequest.id,
+          provider: signatureRequest.provider,
+          status: signatureRequest.status,
+          sentAt: signatureRequest.sent_at,
+        },
+        mode: "manual_beta_v1",
+        message:
+          "Fluxo beta iniciado. O Lex gerou links internos de aprovação para você compartilhar com os signatários.",
+      });
     }
 
     const clicksignRequest = await createClicksignSignatureRequest({

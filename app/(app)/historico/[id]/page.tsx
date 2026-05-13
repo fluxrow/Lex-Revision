@@ -16,6 +16,7 @@ export default async function ContractDetailPage({
   const { id } = await params;
   const contract = await getContractDetail(id);
   const clicksignStatus = getClicksignRuntimeStatus();
+  const signatureDeliveryMode = clicksignStatus.configured ? "clicksign" : "manual_beta";
 
   if (!contract) {
     notFound();
@@ -278,7 +279,7 @@ export default async function ContractDetailPage({
                 </div>
                 <SendForSignatureCard
                   contractId={contract.id}
-                  providerReady={clicksignStatus.configured}
+                  deliveryMode={signatureDeliveryMode}
                   providerEnvironment={clicksignStatus.environment}
                   initialSigner={{
                     name: contract.client?.name || "",
@@ -305,7 +306,7 @@ export default async function ContractDetailPage({
                     >
                       <div className="row sp-between" style={{ alignItems: "flex-start", marginBottom: 10 }}>
                         <div>
-                          <div style={{ fontWeight: 700 }}>{request.provider}</div>
+                          <div style={{ fontWeight: 700 }}>{formatSignatureProvider(request.provider)}</div>
                           <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
                             Enviado em {request.sentAt ? formatDateTime(request.sentAt) : "—"}
                           </div>
@@ -358,6 +359,17 @@ export default async function ContractDetailPage({
       </div>
     </>
   );
+}
+
+function formatSignatureProvider(provider: string) {
+  switch (provider) {
+    case "lex_beta":
+      return "Lex beta manual";
+    case "clicksign":
+      return "Clicksign";
+    default:
+      return provider;
+  }
 }
 
 function MetaRow({ label, value }: { label: string; value: string }) {

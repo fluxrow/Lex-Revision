@@ -62,7 +62,7 @@ export default async function AssinaturasPage() {
                     <div style={{ fontWeight: 700, fontSize: 15 }}>{signature.contract}</div>
                   )}
                   <div className="muted" style={{ fontSize: 12, marginTop: 3 }}>
-                    {signature.progress} de {signature.total} assinaturas · {signature.provider}
+                    {signature.progress} de {signature.total} assinaturas · {formatSignatureProvider(signature.provider)}
                   </div>
                 </div>
                 <div className="row" style={{ gap: 12 }}>
@@ -125,4 +125,15 @@ export default async function AssinaturasPage() {
       )}
     </>
   );
+}
+
+function formatSignatureProvider(provider: string) {
+  switch (provider) {
+    case "lex_beta":
+      return "Lex beta manual";
+    case "clicksign":
+      return "Clicksign";
+    default:
+      return provider;
+  }
 }

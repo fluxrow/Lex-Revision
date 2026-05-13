@@ -14,12 +14,12 @@ type SignerDraft = {
 export default function SendForSignatureCard({
   contractId,
   initialSigner,
-  providerReady,
+  deliveryMode,
   providerEnvironment,
 }: {
   contractId: string;
   initialSigner?: Partial<SignerDraft> | null;
-  providerReady: boolean;
+  deliveryMode: "clicksign" | "manual_beta";
   providerEnvironment: "sandbox" | "production";
 }) {
   const router = useRouter();
@@ -49,6 +49,8 @@ export default function SendForSignatureCard({
   const removeSigner = (index: number) => {
     setSigners((current) => current.filter((_, signerIndex) => signerIndex !== index));
   };
+
+  const isManualBeta = deliveryMode === "manual_beta";
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
@@ -88,22 +90,24 @@ export default function SendForSignatureCard({
     <div className="card">
       <div className="card-title">Iniciar assinatura</div>
       <div className="card-sub">
-        Defina quem precisa assinar. O Lex envia o contrato para a Clicksign e acompanha o status real da assinatura.
+        {isManualBeta
+          ? "Defina quem precisa aprovar. O Lex gera links internos sem custo para você compartilhar com os signatários."
+          : "Defina quem precisa assinar. O Lex envia o contrato para a Clicksign e acompanha o status real da assinatura."}
       </div>
 
-      {!providerReady ? (
+      {isManualBeta ? (
         <div
           style={{
             marginTop: 14,
             marginBottom: 14,
             padding: "12px 14px",
             borderRadius: 12,
-            background: "var(--red-soft)",
+            background: "var(--amber-soft)",
             border: "1px solid var(--border)",
-            color: "var(--red)",
+            color: "var(--amber)",
           }}
         >
-          A Clicksign ainda não foi configurada neste ambiente. Preencha o token no Vercel para liberar envios reais.
+          Modo beta sem custo ativo. O Lex vai criar links internos de aprovação para teste, sem assinatura certificada por provider externo.
         </div>
       ) : (
         <div
@@ -184,9 +188,13 @@ export default function SendForSignatureCard({
           <Icon name="plus" size={14} />
           Adicionar signatário
         </button>
-        <button className="btn btn-primary" type="button" onClick={handleSubmit} disabled={isSubmitting || !providerReady}>
+        <button className="btn btn-primary" type="button" onClick={handleSubmit} disabled={isSubmitting}>
           <Icon name="send" size={14} />
-          {isSubmitting ? "Enviando..." : providerReady ? "Enviar para assinatura" : "Clicksign não configurada"}
+          {isSubmitting
+            ? "Enviando..."
+            : isManualBeta
+              ? "Gerar links de aprovação"
+              : "Enviar para assinatura"}
         </button>
       </div>
 

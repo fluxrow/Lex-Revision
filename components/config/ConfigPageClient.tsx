@@ -535,9 +535,9 @@ export default function ConfigPageClient({
                 ? clicksignEnvironment === "sandbox"
                   ? `Envio real habilitado em sandbox${clicksignWebhookProtected ? " com webhook protegido" : " sem assinatura de webhook ativa"}.`
                   : `Envio real habilitado em produção${clicksignWebhookProtected ? " com webhook protegido" : " sem assinatura de webhook ativa"}.`
-                : "Backend pronto, mas o token da Clicksign ainda não foi configurado neste ambiente.",
+                : "Modo beta sem custo ativo. O Lex gera links internos de aprovação e a Clicksign fica opcional para assinatura certificada no futuro.",
               "pen",
-              clicksignConfigured,
+              true,
             ],
             ["Stripe", canManageBilling ? "Cobrança e portal ativos" : "Conecte a cobrança para autoatendimento", "card", canManageBilling],
             ["WhatsApp", "Canal planejado para fases futuras do rollout", "send", false],
@@ -553,12 +553,14 @@ export default function ConfigPageClient({
               {name === "Stripe" && canManageBilling ? (
                 <CustomerPortalButton variant="secondary" size="sm" label="Abrir portal" />
               ) : (
-                <span className={`chip ${enabled ? "chip-green" : name === "Clicksign" ? "chip-red" : "chip-amber"}`}>
+                <span className={`chip ${name === "Clicksign" ? clicksignConfigured ? "chip-green" : "chip-amber" : enabled ? "chip-green" : "chip-amber"}`}>
                   {name === "Clicksign"
                     ? enabled
                       ? clicksignEnvironment === "sandbox"
                         ? "Sandbox ativo"
-                        : "Produção ativa"
+                        : clicksignConfigured
+                          ? "Produção ativa"
+                          : "Modo beta ativo"
                       : "Configuração pendente"
                     : enabled
                       ? "Backend disponível"
