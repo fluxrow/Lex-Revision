@@ -5,6 +5,9 @@ import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
+const HARD_BLOCKED_STATUSES = ["canceled", "incomplete_expired"];
+const SOFT_WARNING_STATUSES = ["inactive", "unpaid", "past_due"];
+
 export default async function AppLayout({
   children,
 }: Readonly<{
@@ -24,7 +27,9 @@ export default async function AppLayout({
     redirect("/signup?activation=required");
   }
 
-  if (["inactive", "canceled", "unpaid", "incomplete_expired"].includes(account.organization.subscription_status || "inactive")) {
+  const subscriptionStatus = account.organization.subscription_status ?? "";
+
+  if (HARD_BLOCKED_STATUSES.includes(subscriptionStatus)) {
     redirect("/login?billing=inactive");
   }
 
@@ -55,6 +60,21 @@ export default async function AppLayout({
               }}
             >
               Admin preview ativo. Este acesso serve para validacao interna da interface e do fluxo; a operacao real ainda depende de um Supabase remoto configurado.
+            </div>
+          ) : null}
+          {!account.isPreview && SOFT_WARNING_STATUSES.includes(subscriptionStatus) ? (
+            <div
+              style={{
+                marginBottom: 16,
+                padding: "10px 12px",
+                borderRadius: 10,
+                border: "1px solid var(--border)",
+                background: "var(--amber-soft)",
+                color: "var(--amber)",
+                fontSize: 13,
+              }}
+            >
+              Sua organizacao esta com status <strong>{subscriptionStatus}</strong>. O acesso segue liberado para configuracao e onboarding, mas revise faturamento e ativacao para evitar bloqueio posterior.
             </div>
           ) : null}
           {children}
