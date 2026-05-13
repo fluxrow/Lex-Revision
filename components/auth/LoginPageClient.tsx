@@ -79,15 +79,20 @@ export default function LoginPageClient({
         return;
       }
 
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
       });
 
-      if (error) {
-        setError(error.message);
+      const payload = await response.json();
+      if (!response.ok) {
+        setError(payload.error || "Falha ao entrar.");
       } else {
         window.location.assign("/dashboard");
       }

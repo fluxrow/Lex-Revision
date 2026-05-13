@@ -108,15 +108,20 @@ export default function SignupPageClient({
         );
       }
 
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const loginResponse = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
       });
 
-      if (signInError) {
-        throw new Error(signInError.message);
+      const loginPayload = await loginResponse.json();
+      if (!loginResponse.ok) {
+        throw new Error(loginPayload.error || "Nao foi possivel iniciar a sessao.");
       }
 
       window.location.assign("/dashboard");
