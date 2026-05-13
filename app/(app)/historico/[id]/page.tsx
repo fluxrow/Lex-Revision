@@ -40,6 +40,7 @@ export default async function ContractDetailPage({
           </div>
         </div>
         <ContractDetailActions
+          contractId={contract.id}
           contractName={contract.name}
           contractBody={contract.body}
           hasSignatureFlow={contract.signatureRequests.length > 0}

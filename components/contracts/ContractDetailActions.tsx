@@ -6,25 +6,17 @@ import Link from "next/link";
 import Icon from "@/components/ui/Icon";
 
 export default function ContractDetailActions({
+  contractId,
   contractName,
   contractBody,
   hasSignatureFlow,
 }: {
+  contractId: string;
   contractName: string;
   contractBody: string;
   hasSignatureFlow: boolean;
 }) {
   const [copied, setCopied] = useState(false);
-
-  const handleDownload = () => {
-    const blob = new Blob([contractBody], { type: "text/markdown;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${slugify(contractName) || "contrato"}.md`;
-    link.click();
-    URL.revokeObjectURL(url);
-  };
 
   const handleCopy = async () => {
     try {
@@ -38,9 +30,18 @@ export default function ContractDetailActions({
 
   return (
     <div className="actions" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-      <button className="btn btn-secondary" type="button" onClick={handleDownload}>
+      <a
+        className="btn btn-secondary"
+        href={`/api/contracts/${contractId}/export?format=docx`}
+        download
+        style={{ textDecoration: "none" }}
+      >
         <Icon name="download" size={14} />
-        Baixar texto
+        Baixar Word
+      </a>
+      <button className="btn btn-ghost" type="button" disabled title="PDF entra na próxima etapa de exportação.">
+        <Icon name="download" size={14} />
+        PDF em breve
       </button>
       <button className="btn btn-secondary" type="button" onClick={handleCopy}>
         <Icon name="copy" size={14} />
@@ -56,13 +57,4 @@ export default function ContractDetailActions({
       </Link>
     </div>
   );
-}
-
-function slugify(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
 }
