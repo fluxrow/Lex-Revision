@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import ContractDetailActions from "@/components/contracts/ContractDetailActions";
 import SendForSignatureCard from "@/components/signatures/SendForSignatureCard";
+import SignatureLinkActions from "@/components/signatures/SignatureLinkActions";
 import Icon from "@/components/ui/Icon";
 import { getClicksignRuntimeStatus } from "@/lib/clicksign";
 import { fmtBRL, STATUS_LABELS } from "@/lib/data";
@@ -17,6 +18,9 @@ export default async function ContractDetailPage({
   const contract = await getContractDetail(id);
   const clicksignStatus = getClicksignRuntimeStatus();
   const signatureDeliveryMode = clicksignStatus.configured ? "clicksign" : "manual_beta";
+  const hasOpenSignatureFlow = contract?.signatureRequests.some((request) =>
+    ["sent", "partial"].includes(request.status)
+  );
 
   if (!contract) {
     notFound();
@@ -46,7 +50,7 @@ export default async function ContractDetailPage({
           contractId={contract.id}
           contractName={contract.name}
           contractBody={contract.body}
-          hasSignatureFlow={contract.signatureRequests.length > 0}
+          hasSignatureFlow={Boolean(hasOpenSignatureFlow)}
         />
       </div>
 
@@ -272,10 +276,12 @@ export default async function ContractDetailPage({
             <div className="card-sub">
               Acompanhe o envio e o progresso dos signatários vinculados a este contrato.
             </div>
-            {contract.signatureRequests.length === 0 ? (
+            {contract.signatureRequests.length === 0 || !hasOpenSignatureFlow ? (
               <div className="col" style={{ gap: 12 }}>
                 <div className="muted">
-                  Ainda não existe solicitação real de assinatura para este contrato.
+                  {contract.signatureRequests.length === 0
+                    ? "Ainda não existe solicitação real de assinatura para este contrato."
+                    : "A última rodada de assinatura já foi encerrada. Você pode iniciar uma nova rodada para este contrato."}
                 </div>
                 <SendForSignatureCard
                   contractId={contract.id}
@@ -326,18 +332,7 @@ export default async function ContractDetailPage({
                               <div className="muted" style={{ fontSize: 12 }}>{signer.email}</div>
                             </div>
                             <div className="row" style={{ gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
-                              {signer.signatureUrl ? (
-                                <a
-                                  href={signer.signatureUrl}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="btn btn-ghost btn-sm"
-                                  style={{ textDecoration: "none" }}
-                                >
-                                  <Icon name="send" size={12} />
-                                  Abrir link
-                                </a>
-                              ) : null}
+                              {signer.signatureUrl ? <SignatureLinkActions signatureUrl={signer.signatureUrl} /> : null}
                               <span className={`chip ${signer.status === "signed" ? "chip-green" : signer.status === "viewed" ? "chip-accent" : signer.status === "refused" ? "chip-red" : "chip-amber"}`}>
                                 {signer.status}
                               </span>

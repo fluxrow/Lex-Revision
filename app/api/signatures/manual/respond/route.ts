@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     const admin = createAdminClient();
     const { data: signer, error: signerError } = await admin
       .from("signers")
-      .select("id, status, viewed_at, signed_at, signature_request_id")
+      .select("id, name, email, status, viewed_at, signed_at, signature_request_id")
       .eq("id", payload.signerId)
       .maybeSingle();
 
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
 
     const { data: signatureRequest, error: requestError } = await admin
       .from("signature_requests")
-      .select("id, contract_id, status")
+      .select("id, contract_id, status, contracts(organization_id, name)")
       .eq("id", signer.signature_request_id)
       .maybeSingle();
 
@@ -78,10 +78,40 @@ export async function POST(request: Request) {
 
     await syncSignatureRequestStatus(admin, signatureRequest.id, signatureRequest.contract_id);
 
+    const contract = Array.isArray(signatureRequest.contracts)
+      ? signatureRequest.contracts[0]
+      : signatureRequest.contracts;
+    const { data: refreshedRequest } = await admin
+      .from("signature_requests")
+      .select("status")
+      .eq("id", signatureRequest.id)
+      .maybeSingle();
+
+    if (contract?.organization_id) {
+      await admin.from("activity_logs").insert({
+        organization_id: contract.organization_id,
+        user_id: null,
+        action:
+          payload.action === "approve"
+            ? "signature_request.signer_signed"
+            : "signature_request.signer_refused",
+        resource_type: "signature_request",
+        resource_id: signatureRequest.id,
+        metadata: {
+          contract_id: signatureRequest.contract_id,
+          contract_name: contract.name || null,
+          signer_id: signer.id,
+          signer_email: signer.email || null,
+          signer_name: signer.name || null,
+          provider: "lex_beta",
+        },
+      });
+    }
+
     return NextResponse.json({
       ok: true,
       status: nextStatus,
-      requestStatus: nextStatus === "refused" ? "cancelled" : "updated",
+      requestStatus: refreshedRequest?.status || (nextStatus === "refused" ? "cancelled" : "updated"),
     });
   } catch (error: any) {
     return NextResponse.json(

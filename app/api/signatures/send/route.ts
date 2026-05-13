@@ -51,7 +51,7 @@ export async function POST(request: Request) {
       .from("signature_requests")
       .select("id, status")
       .eq("contract_id", payload.contractId)
-      .neq("status", "cancelled")
+      .in("status", ["sent", "partial"])
       .order("sent_at", { ascending: false })
       .limit(1)
       .maybeSingle();
