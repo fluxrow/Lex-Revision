@@ -113,6 +113,15 @@ export type ContractDetail = {
       position: number;
     }>;
   }>;
+  activityLog: Array<{
+    id: string;
+    action: string;
+    resourceType: string;
+    resourceId: string | null;
+    createdAt: string;
+    title: string;
+    description: string;
+  }>;
   isFallback: boolean;
 };
 
@@ -453,13 +462,37 @@ export async function getContractDetail(contractId: string): Promise<ContractDet
       .limit(1)
       .maybeSingle();
 
-    return mapContractDetail(contract, analysisVersion);
+    const signatureRequestIds = Array.isArray(contract.signature_requests)
+      ? contract.signature_requests.map((request: any) => String(request.id))
+      : [];
+
+    const { data: contractActivityLogs } = await supabase
+      .from("activity_logs")
+      .select("id, action, resource_type, resource_id, metadata, created_at")
+      .eq("resource_type", "contract")
+      .eq("resource_id", contractId)
+      .order("created_at", { ascending: false });
+
+    const { data: signatureActivityLogs } =
+      signatureRequestIds.length > 0
+        ? await supabase
+            .from("activity_logs")
+            .select("id, action, resource_type, resource_id, metadata, created_at")
+            .eq("resource_type", "signature_request")
+            .in("resource_id", signatureRequestIds)
+            .order("created_at", { ascending: false })
+        : { data: [] as any[] };
+
+    return mapContractDetail(contract, analysisVersion, [
+      ...(contractActivityLogs || []),
+      ...(signatureActivityLogs || []),
+    ]);
   } catch {
     return buildMockContractDetail(contractId);
   }
 }
 
-function mapContractDetail(contract: any, analysisVersion: any): ContractDetail {
+function mapContractDetail(contract: any, analysisVersion: any, activityLogs: any[] = []): ContractDetail {
   const structured = coerceStructuredPayload(contract.structured_payload, contract.body_md || contract.body_html || "");
   const analysisPayload = isRecord(analysisVersion?.analysis_payload) ? analysisVersion.analysis_payload : {};
   const review = isRecord(analysisPayload.review) ? analysisPayload.review : {};
@@ -576,6 +609,15 @@ function mapContractDetail(contract: any, analysisVersion: any): ContractDetail 
         }
       : null,
     signatureRequests,
+    activityLog: Array.isArray(activityLogs)
+      ? [...activityLogs]
+          .sort((left, right) => {
+            const leftDate = left.created_at ? new Date(left.created_at).getTime() : 0;
+            const rightDate = right.created_at ? new Date(right.created_at).getTime() : 0;
+            return rightDate - leftDate;
+          })
+          .map((entry: any) => mapActivityLogEntry(entry))
+      : [],
     isFallback: false,
   };
 }
@@ -694,8 +736,104 @@ function buildMockContractDetail(contractId: string): ContractDetail | null {
       })),
     },
     signatureRequests: [],
+    activityLog: [
+      {
+        id: `mock-contract-created-${fallback.id}`,
+        action: "contract.created",
+        resourceType: "contract",
+        resourceId: fallback.id,
+        createdAt: `${fallback.updated}T09:00:00.000Z`,
+        title: "Contrato de demonstração carregado",
+        description: "Este histórico veio do preview controlado e não representa um evento do banco remoto.",
+      },
+    ],
     isFallback: true,
   };
+}
+
+function mapActivityLogEntry(entry: any) {
+  const metadata = isRecord(entry?.metadata) ? entry.metadata : {};
+  const action = String(entry?.action || "activity.unknown");
+  const signerName = typeof metadata.signer_name === "string" ? metadata.signer_name : null;
+  const signerEmail = typeof metadata.signer_email === "string" ? metadata.signer_email : null;
+  const signersCount =
+    typeof metadata.signers_count === "number"
+      ? metadata.signers_count
+      : typeof metadata.signer_count === "number"
+        ? metadata.signer_count
+        : null;
+  const contractType = typeof metadata.contract_type === "string" ? metadata.contract_type : null;
+  const source = typeof metadata.source === "string" ? metadata.source : null;
+  const provider = typeof metadata.provider === "string" ? metadata.provider : null;
+
+  switch (action) {
+    case "contract.created":
+      return {
+        id: String(entry.id),
+        action,
+        resourceType: String(entry.resource_type || "contract"),
+        resourceId: entry.resource_id ? String(entry.resource_id) : null,
+        createdAt: String(entry.created_at || new Date().toISOString()),
+        title: "Contrato criado",
+        description: `Origem ${beautifySource(source || "manual")} · tipo ${contractType || "geral"}.`,
+      };
+    case "signature_request.created":
+      return {
+        id: String(entry.id),
+        action,
+        resourceType: String(entry.resource_type || "signature_request"),
+        resourceId: entry.resource_id ? String(entry.resource_id) : null,
+        createdAt: String(entry.created_at || new Date().toISOString()),
+        title: "Rodada de assinatura iniciada",
+        description: `${provider === "lex_beta" ? "Modo beta manual" : provider || "Provider externo"} · ${signersCount || 0} signatário(s).`,
+      };
+    case "signature_request.signer_viewed":
+      return {
+        id: String(entry.id),
+        action,
+        resourceType: String(entry.resource_type || "signature_request"),
+        resourceId: entry.resource_id ? String(entry.resource_id) : null,
+        createdAt: String(entry.created_at || new Date().toISOString()),
+        title: "Link visualizado",
+        description: signerName
+          ? `${signerName} abriu o link de aprovação${signerEmail ? ` (${signerEmail})` : ""}.`
+          : "Um signatário abriu o link de aprovação.",
+      };
+    case "signature_request.signer_signed":
+      return {
+        id: String(entry.id),
+        action,
+        resourceType: String(entry.resource_type || "signature_request"),
+        resourceId: entry.resource_id ? String(entry.resource_id) : null,
+        createdAt: String(entry.created_at || new Date().toISOString()),
+        title: "Assinatura aprovada",
+        description: signerName
+          ? `${signerName} aprovou o contrato${signerEmail ? ` (${signerEmail})` : ""}.`
+          : "Um signatário aprovou esta rodada.",
+      };
+    case "signature_request.signer_refused":
+      return {
+        id: String(entry.id),
+        action,
+        resourceType: String(entry.resource_type || "signature_request"),
+        resourceId: entry.resource_id ? String(entry.resource_id) : null,
+        createdAt: String(entry.created_at || new Date().toISOString()),
+        title: "Assinatura recusada",
+        description: signerName
+          ? `${signerName} recusou o contrato${signerEmail ? ` (${signerEmail})` : ""}.`
+          : "Um signatário recusou esta rodada.",
+      };
+    default:
+      return {
+        id: String(entry.id),
+        action,
+        resourceType: String(entry.resource_type || "activity"),
+        resourceId: entry.resource_id ? String(entry.resource_id) : null,
+        createdAt: String(entry.created_at || new Date().toISOString()),
+        title: action,
+        description: "Evento registrado no histórico operacional deste contrato.",
+      };
+  }
 }
 
 function coerceStructuredPayload(value: unknown, fallbackBody: string): StructuredContractPayload {

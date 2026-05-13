@@ -46,6 +46,7 @@ export default async function SignaturePortalPage({
           provider,
           contracts(
             id,
+            organization_id,
             name,
             status,
             body_md,
@@ -73,6 +74,24 @@ export default async function SignaturePortalPage({
         viewed_at: signer.viewed_at || new Date().toISOString(),
       })
       .eq("id", signerId);
+
+    if (contract?.organization_id) {
+      await admin.from("activity_logs").insert({
+        organization_id: contract.organization_id,
+        user_id: null,
+        action: "signature_request.signer_viewed",
+        resource_type: "signature_request",
+        resource_id: signatureRequest?.id || null,
+        metadata: {
+          contract_id: contract.id,
+          contract_name: contract.name || null,
+          signer_id: signer.id,
+          signer_email: signer.email || null,
+          signer_name: signer.name || null,
+          provider: signatureRequest?.provider || "lex_beta",
+        },
+      });
+    }
 
     signer.status = "viewed";
   }

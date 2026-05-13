@@ -65,6 +65,33 @@ export default async function ContractDetailPage({
         {contract.isFallback ? <span className="chip chip-amber">Sem dados remotos para este contrato</span> : null}
       </div>
 
+      {contract.isFallback ? (
+        <div
+          className="card"
+          style={{
+            marginBottom: 18,
+            borderColor: "var(--amber)",
+            background: "linear-gradient(135deg, var(--amber-soft), transparent)",
+          }}
+        >
+          <div className="card-title">Contrato de demonstração</div>
+          <div className="card-sub" style={{ maxWidth: 760 }}>
+            Este detalhe foi aberto a partir do fallback controlado do Lex. Ele ajuda no onboarding, mas não
+            reflete o banco remoto nem grava novas etapas reais de assinatura, análise ou exportação.
+          </div>
+          <div className="row" style={{ gap: 10, marginTop: 16, flexWrap: "wrap" }}>
+            <Link href="/novo" className="btn btn-primary" style={{ textDecoration: "none" }}>
+              <Icon name="plus" size={14} />
+              Criar contrato real
+            </Link>
+            <Link href="/historico" className="btn btn-secondary" style={{ textDecoration: "none" }}>
+              <Icon name="folder" size={14} />
+              Voltar ao histórico
+            </Link>
+          </div>
+        </div>
+      ) : null}
+
       <div className="grid contract-detail-grid" style={{ alignItems: "start" }}>
         <div className="col" style={{ gap: 16 }}>
           <div className="card" id="assinaturas">
@@ -129,6 +156,40 @@ export default async function ContractDetailPage({
                       {key.replaceAll("_", " ")}
                     </div>
                     <div style={{ marginTop: 6, fontWeight: 600 }}>{value || "—"}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="card">
+            <div className="card-title">Linha do tempo</div>
+            <div className="card-sub">Eventos operacionais registrados para este contrato e suas rodadas de assinatura.</div>
+            {contract.activityLog.length === 0 ? (
+              <div className="muted" style={{ marginTop: 14 }}>
+                Ainda não existe atividade registrada para este contrato.
+              </div>
+            ) : (
+              <div className="col" style={{ gap: 10, marginTop: 14 }}>
+                {contract.activityLog.slice(0, 8).map((entry) => (
+                  <div
+                    key={entry.id}
+                    style={{
+                      padding: "12px 14px",
+                      borderRadius: 12,
+                      border: "1px solid var(--border)",
+                      background: "var(--surface-2)",
+                    }}
+                  >
+                    <div className="row sp-between" style={{ gap: 12, alignItems: "flex-start", marginBottom: 6 }}>
+                      <div style={{ fontWeight: 700 }}>{entry.title}</div>
+                      <span className="dim" style={{ fontSize: 11.5, whiteSpace: "nowrap" }}>
+                        {formatDateTime(entry.createdAt)}
+                      </span>
+                    </div>
+                    <div className="muted" style={{ lineHeight: 1.55 }}>
+                      {entry.description}
+                    </div>
                   </div>
                 ))}
               </div>
