@@ -775,7 +775,7 @@ function mapActivityLogEntry(entry: any) {
         resourceId: entry.resource_id ? String(entry.resource_id) : null,
         createdAt: String(entry.created_at || new Date().toISOString()),
         title: "Contrato criado",
-        description: `Origem ${beautifySource(source || "manual")} · tipo ${contractType || "geral"}.`,
+        description: `Origem ${beautifyActivitySource(source || "manual")} · tipo ${contractType || "geral"}.`,
       };
     case "signature_request.created":
       return {
@@ -833,6 +833,21 @@ function mapActivityLogEntry(entry: any) {
         title: action,
         description: "Evento registrado no histórico operacional deste contrato.",
       };
+  }
+}
+
+function beautifyActivitySource(value: string) {
+  switch (value) {
+    case "ai_generate":
+      return "IA";
+    case "template_fill":
+      return "biblioteca";
+    case "upload_flow":
+      return "upload";
+    case "mock_preview":
+      return "preview demo";
+    default:
+      return value.replaceAll("_", " ");
   }
 }
 
