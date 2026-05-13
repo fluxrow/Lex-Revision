@@ -27,6 +27,9 @@ type ConfigPageClientProps = {
   accessVouchers: AccessVoucherSummary[];
   planLabel: string;
   subscriptionStatus: string;
+  clicksignConfigured: boolean;
+  clicksignEnvironment: "sandbox" | "production";
+  clicksignWebhookProtected: boolean;
   canManageBilling: boolean;
   canManageWorkspace: boolean;
   canManageVouchers: boolean;
@@ -53,6 +56,9 @@ export default function ConfigPageClient({
   accessVouchers,
   planLabel,
   subscriptionStatus,
+  clicksignConfigured,
+  clicksignEnvironment,
+  clicksignWebhookProtected,
   canManageBilling,
   canManageWorkspace,
   canManageVouchers,
@@ -523,7 +529,16 @@ export default function ConfigPageClient({
         <div className="grid grid-2">
           {[
             ["Google Drive", "Camada de produto ainda sem painel de conexão dedicado", "folder", false],
-            ["Clicksign", "Webhook e estrutura backend prontos; UI de envio dedicado em evolução", "pen", true],
+            [
+              "Clicksign",
+              clicksignConfigured
+                ? clicksignEnvironment === "sandbox"
+                  ? `Envio real habilitado em sandbox${clicksignWebhookProtected ? " com webhook protegido" : " sem assinatura de webhook ativa"}.`
+                  : `Envio real habilitado em produção${clicksignWebhookProtected ? " com webhook protegido" : " sem assinatura de webhook ativa"}.`
+                : "Backend pronto, mas o token da Clicksign ainda não foi configurado neste ambiente.",
+              "pen",
+              clicksignConfigured,
+            ],
             ["Stripe", canManageBilling ? "Cobrança e portal ativos" : "Conecte a cobrança para autoatendimento", "card", canManageBilling],
             ["WhatsApp", "Canal planejado para fases futuras do rollout", "send", false],
           ].map(([name, description, icon, enabled], index) => (
@@ -538,8 +553,16 @@ export default function ConfigPageClient({
               {name === "Stripe" && canManageBilling ? (
                 <CustomerPortalButton variant="secondary" size="sm" label="Abrir portal" />
               ) : (
-                <span className={`chip ${enabled ? "chip-green" : "chip-amber"}`}>
-                  {enabled ? "Backend disponível" : "Painel em evolução"}
+                <span className={`chip ${enabled ? "chip-green" : name === "Clicksign" ? "chip-red" : "chip-amber"}`}>
+                  {name === "Clicksign"
+                    ? enabled
+                      ? clicksignEnvironment === "sandbox"
+                        ? "Sandbox ativo"
+                        : "Produção ativa"
+                      : "Configuração pendente"
+                    : enabled
+                      ? "Backend disponível"
+                      : "Painel em evolução"}
                 </span>
               )}
             </div>

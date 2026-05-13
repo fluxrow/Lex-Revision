@@ -31,6 +31,7 @@ export type SignatureSummary = {
     email: string;
     status: string;
     when: string | null;
+    signatureUrl: string | null;
   }>;
 };
 
@@ -357,7 +358,7 @@ export async function getSignatureOverview(): Promise<SignatureSummary[]> {
     const { data, error } = await supabase
       .from("signature_requests")
       .select(
-        "id, provider, status, sent_at, completed_at, contract:contracts(id, name), signers(name, email, status, signed_at, viewed_at, position)"
+        "id, provider, status, sent_at, completed_at, contract:contracts(id, name), signers(name, email, status, signed_at, viewed_at, signature_url, position)"
       )
       .order("sent_at", { ascending: false });
 
@@ -384,6 +385,7 @@ export async function getSignatureOverview(): Promise<SignatureSummary[]> {
           email: signer.email,
           status: signer.status,
           when: signer.signed_at || signer.viewed_at || null,
+          signatureUrl: signer.signature_url || null,
         })),
       };
     });

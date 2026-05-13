@@ -33,6 +33,18 @@ export function hasClicksignConfig() {
   return Boolean(getClicksignAccessToken());
 }
 
+export function getClicksignRuntimeStatus() {
+  const baseUrl =
+    (process.env.CLICKSIGN_BASE_URL?.trim() || "https://app.clicksign.com/api/v1").replace(/\/+$/, "");
+
+  return {
+    configured: hasClicksignConfig(),
+    webhookProtected: Boolean(process.env.CLICKSIGN_WEBHOOK_SECRET?.trim()),
+    baseUrl,
+    environment: baseUrl.includes("sandbox.clicksign.com") ? "sandbox" : "production",
+  } as const;
+}
+
 export function getClicksignConfig() {
   const accessToken = getClicksignAccessToken();
   if (!accessToken) {

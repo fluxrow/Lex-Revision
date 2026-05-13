@@ -22,6 +22,9 @@ export default async function ConfigPage() {
       accessVouchers={overview.accessVouchers}
       planLabel={overview.planLabel}
       subscriptionStatus={overview.subscriptionStatus}
+      clicksignConfigured={overview.integrations.clicksignConfigured}
+      clicksignEnvironment={overview.integrations.clicksignEnvironment}
+      clicksignWebhookProtected={overview.integrations.clicksignWebhookProtected}
       canManageBilling={overview.canManageBilling}
       canManageWorkspace={["owner", "admin"].includes(overview.account.membership?.role || "")}
       canManageVouchers={overview.canManageVouchers}

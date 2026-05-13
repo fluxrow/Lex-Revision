@@ -1,5 +1,6 @@
 import { getCurrentAccount } from "@/lib/auth/account";
 import { PLAN_CATALOG, normalizePlan } from "@/lib/billing/plans";
+import { getClicksignRuntimeStatus } from "@/lib/clicksign";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hasAdminSupabaseEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
@@ -40,6 +41,12 @@ export type AccessVoucherSummary = {
   createdAt: string | null;
 };
 
+export type IntegrationHealthSummary = {
+  clicksignConfigured: boolean;
+  clicksignEnvironment: "sandbox" | "production";
+  clicksignWebhookProtected: boolean;
+};
+
 export async function getAccountOverview() {
   const account = await getCurrentAccount();
 
@@ -52,6 +59,7 @@ export async function getAccountOverview() {
   };
 
   if (account.isPreview || previewOrganization.previewMode) {
+    const clicksignStatus = getClicksignRuntimeStatus();
     const onboardingSteps: OnboardingStep[] = [
       {
         id: "billing",
@@ -100,6 +108,11 @@ export async function getAccountOverview() {
       statusTone: "healthy" as const,
       statusLabel: "Preview interno",
       roleLabel: getRoleLabel(account.membership.role),
+      integrations: {
+        clicksignConfigured: clicksignStatus.configured,
+        clicksignEnvironment: clicksignStatus.environment,
+        clicksignWebhookProtected: clicksignStatus.webhookProtected,
+      } satisfies IntegrationHealthSummary,
       teamMembers: [
         {
           id: "preview-owner",
@@ -194,6 +207,7 @@ export async function getAccountOverview() {
   const normalizedPlan = normalizePlan(account.organization.plan) ?? "starter";
   const planMeta = PLAN_CATALOG[normalizedPlan];
   const subscriptionStatus = account.organization.subscription_status ?? "inactive";
+  const clicksignStatus = getClicksignRuntimeStatus();
   const canManageBilling = Boolean(account.organization.stripe_customer_id);
   const canManageVouchers = ["owner", "admin"].includes(account.membership.role || "");
   const accessVouchers: AccessVoucherSummary[] = (voucherRows ?? []).map((voucher) => ({
@@ -278,6 +292,11 @@ export async function getAccountOverview() {
     statusTone: getStatusTone(subscriptionStatus, progressPercent),
     statusLabel: getStatusLabel(subscriptionStatus),
     roleLabel: getRoleLabel(account.membership.role),
+    integrations: {
+      clicksignConfigured: clicksignStatus.configured,
+      clicksignEnvironment: clicksignStatus.environment,
+      clicksignWebhookProtected: clicksignStatus.webhookProtected,
+    } satisfies IntegrationHealthSummary,
     teamMembers,
     accessVouchers,
     nextStep: onboardingSteps.find((step) => !step.complete) ?? null,

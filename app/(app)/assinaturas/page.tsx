@@ -92,6 +92,18 @@ export default async function AssinaturasPage() {
                       <div style={{ fontWeight: 600, fontSize: 13.5 }}>{signer.name}</div>
                       <div className="muted" style={{ fontSize: 11.5 }}>{signer.email}</div>
                     </div>
+                    {signer.signatureUrl ? (
+                      <a
+                        href={signer.signatureUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="btn btn-ghost btn-sm"
+                        style={{ textDecoration: "none" }}
+                      >
+                        <Icon name="send" size={11} />
+                        Abrir link
+                      </a>
+                    ) : null}
                     {signer.status === "signed" ? (
                       <span className="chip chip-green"><Icon name="check" size={11} />Assinou {formatSignerEvent(signer.when) ? `· ${formatSignerEvent(signer.when)}` : ""}</span>
                     ) : null}

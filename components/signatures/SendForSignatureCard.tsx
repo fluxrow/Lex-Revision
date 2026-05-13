@@ -14,9 +14,13 @@ type SignerDraft = {
 export default function SendForSignatureCard({
   contractId,
   initialSigner,
+  providerReady,
+  providerEnvironment,
 }: {
   contractId: string;
   initialSigner?: Partial<SignerDraft> | null;
+  providerReady: boolean;
+  providerEnvironment: "sandbox" | "production";
 }) {
   const router = useRouter();
   const [signers, setSigners] = useState<SignerDraft[]>([
@@ -87,6 +91,38 @@ export default function SendForSignatureCard({
         Defina quem precisa assinar. O Lex envia o contrato para a Clicksign e acompanha o status real da assinatura.
       </div>
 
+      {!providerReady ? (
+        <div
+          style={{
+            marginTop: 14,
+            marginBottom: 14,
+            padding: "12px 14px",
+            borderRadius: 12,
+            background: "var(--red-soft)",
+            border: "1px solid var(--border)",
+            color: "var(--red)",
+          }}
+        >
+          A Clicksign ainda não foi configurada neste ambiente. Preencha o token no Vercel para liberar envios reais.
+        </div>
+      ) : (
+        <div
+          style={{
+            marginTop: 14,
+            marginBottom: 14,
+            padding: "12px 14px",
+            borderRadius: 12,
+            background: providerEnvironment === "sandbox" ? "var(--amber-soft)" : "var(--green-soft)",
+            border: "1px solid var(--border)",
+            color: providerEnvironment === "sandbox" ? "var(--amber)" : "var(--green)",
+          }}
+        >
+          {providerEnvironment === "sandbox"
+            ? "Clicksign ativa em sandbox. O fluxo é real, mas está apontado para o ambiente de testes."
+            : "Clicksign ativa em produção. O próximo envio cria uma solicitação real de assinatura."}
+        </div>
+      )}
+
       <div className="col" style={{ gap: 12 }}>
         {signers.map((signer, index) => (
           <div
@@ -148,9 +184,9 @@ export default function SendForSignatureCard({
           <Icon name="plus" size={14} />
           Adicionar signatário
         </button>
-        <button className="btn btn-primary" type="button" onClick={handleSubmit} disabled={isSubmitting}>
+        <button className="btn btn-primary" type="button" onClick={handleSubmit} disabled={isSubmitting || !providerReady}>
           <Icon name="send" size={14} />
-          {isSubmitting ? "Enviando..." : "Enviar para assinatura"}
+          {isSubmitting ? "Enviando..." : providerReady ? "Enviar para assinatura" : "Clicksign não configurada"}
         </button>
       </div>
 

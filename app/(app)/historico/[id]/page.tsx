@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import ContractDetailActions from "@/components/contracts/ContractDetailActions";
 import SendForSignatureCard from "@/components/signatures/SendForSignatureCard";
 import Icon from "@/components/ui/Icon";
+import { getClicksignRuntimeStatus } from "@/lib/clicksign";
 import { fmtBRL, STATUS_LABELS } from "@/lib/data";
 import { getContractDetail } from "@/lib/data.server";
 
@@ -14,6 +15,7 @@ export default async function ContractDetailPage({
 }) {
   const { id } = await params;
   const contract = await getContractDetail(id);
+  const clicksignStatus = getClicksignRuntimeStatus();
 
   if (!contract) {
     notFound();
@@ -276,6 +278,8 @@ export default async function ContractDetailPage({
                 </div>
                 <SendForSignatureCard
                   contractId={contract.id}
+                  providerReady={clicksignStatus.configured}
+                  providerEnvironment={clicksignStatus.environment}
                   initialSigner={{
                     name: contract.client?.name || "",
                     email: contract.client?.email === "—" ? "" : contract.client?.email || "",
@@ -315,14 +319,28 @@ export default async function ContractDetailPage({
                       </div>
                       <div className="col" style={{ gap: 8 }}>
                         {request.signers.map((signer) => (
-                          <div key={signer.id} className="row sp-between" style={{ gap: 12 }}>
-                            <div>
+                          <div key={signer.id} className="row sp-between" style={{ gap: 12, alignItems: "center" }}>
+                            <div style={{ flex: 1 }}>
                               <div style={{ fontWeight: 600 }}>{signer.name}</div>
                               <div className="muted" style={{ fontSize: 12 }}>{signer.email}</div>
                             </div>
-                            <span className={`chip ${signer.status === "signed" ? "chip-green" : signer.status === "viewed" ? "chip-accent" : signer.status === "refused" ? "chip-red" : "chip-amber"}`}>
-                              {signer.status}
-                            </span>
+                            <div className="row" style={{ gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                              {signer.signatureUrl ? (
+                                <a
+                                  href={signer.signatureUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="btn btn-ghost btn-sm"
+                                  style={{ textDecoration: "none" }}
+                                >
+                                  <Icon name="send" size={12} />
+                                  Abrir link
+                                </a>
+                              ) : null}
+                              <span className={`chip ${signer.status === "signed" ? "chip-green" : signer.status === "viewed" ? "chip-accent" : signer.status === "refused" ? "chip-red" : "chip-amber"}`}>
+                                {signer.status}
+                              </span>
+                            </div>
                           </div>
                         ))}
                       </div>
