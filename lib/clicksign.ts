@@ -188,7 +188,7 @@ function slugify(value: string) {
     .toLowerCase();
 }
 
-function renderContractPdf(title: string, body: string) {
+export function renderContractPdf(title: string, body: string) {
   const normalizedTitle = sanitizePdfText(title);
   const normalizedBody = sanitizePdfText(body);
   const bodyLines = wrapText(normalizedBody, 92);

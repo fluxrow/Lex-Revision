@@ -39,10 +39,15 @@ export default function ContractDetailActions({
         <Icon name="download" size={14} />
         Baixar Word
       </a>
-      <button className="btn btn-ghost" type="button" disabled title="PDF entra na próxima etapa de exportação.">
+      <a
+        className="btn btn-secondary"
+        href={`/api/contracts/${contractId}/export?format=pdf`}
+        download
+        style={{ textDecoration: "none" }}
+      >
         <Icon name="download" size={14} />
-        PDF em breve
-      </button>
+        Baixar PDF
+      </a>
       <button className="btn btn-secondary" type="button" onClick={handleCopy}>
         <Icon name="copy" size={14} />
         {copied ? "Copiado" : "Copiar"}

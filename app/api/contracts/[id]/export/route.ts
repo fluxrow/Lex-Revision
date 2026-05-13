@@ -8,6 +8,7 @@ import {
 import { NextResponse } from "next/server";
 
 import { getCurrentAccount } from "@/lib/auth/account";
+import { renderContractPdf } from "@/lib/clicksign";
 import { getContractDetail } from "@/lib/data.server";
 
 export const dynamic = "force-dynamic";
@@ -25,37 +26,50 @@ export async function GET(
   const url = new URL(request.url);
   const format = (url.searchParams.get("format") || "docx").toLowerCase();
 
-  if (format !== "docx") {
-    return NextResponse.json(
-      { error: "Formato ainda não suportado. Use format=docx." },
-      { status: 400 }
-    );
-  }
-
   const contract = await getContractDetail(id);
   if (!contract) {
     return NextResponse.json({ error: "Contrato não encontrado." }, { status: 404 });
   }
 
-  const document = new Document({
-    sections: [
-      {
-        children: buildContractDocument(contract),
+  if (format === "docx") {
+    const document = new Document({
+      sections: [
+        {
+          children: buildContractDocument(contract),
+        },
+      ],
+    });
+
+    const buffer = await Packer.toBuffer(document);
+    const filename = `${slugify(contract.name) || "contrato"}.docx`;
+
+    return new NextResponse(new Uint8Array(buffer), {
+      headers: {
+        "Content-Type":
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "Content-Disposition": contentDisposition(filename),
+        "Cache-Control": "private, no-store",
       },
-    ],
-  });
+    });
+  }
 
-  const buffer = await Packer.toBuffer(document);
-  const filename = `${slugify(contract.name) || "contrato"}.docx`;
+  if (format === "pdf") {
+    const pdfBuffer = renderContractPdf(contract.name, contract.body);
+    const filename = `${slugify(contract.name) || "contrato"}.pdf`;
 
-  return new NextResponse(new Uint8Array(buffer), {
-    headers: {
-      "Content-Type":
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "Content-Disposition": contentDisposition(filename),
-      "Cache-Control": "private, no-store",
-    },
-  });
+    return new NextResponse(new Uint8Array(pdfBuffer), {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": contentDisposition(filename),
+        "Cache-Control": "private, no-store",
+      },
+    });
+  }
+
+  return NextResponse.json(
+    { error: "Formato ainda não suportado. Use format=docx ou format=pdf." },
+    { status: 400 }
+  );
 }
 
 function buildContractDocument(
