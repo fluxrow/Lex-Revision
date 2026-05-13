@@ -19,6 +19,8 @@ type LegalReferenceExplorerProps = {
   contractType: string;
   clauseIds: string[];
   suggestedQueries: string[];
+  initialResults?: LegalReferenceEntry[];
+  initialNote?: string;
 };
 
 export default function LegalReferenceExplorer({
@@ -26,10 +28,12 @@ export default function LegalReferenceExplorer({
   contractType,
   clauseIds,
   suggestedQueries,
+  initialResults = [],
+  initialNote = "",
 }: LegalReferenceExplorerProps) {
   const [query, setQuery] = useState(initialQuery);
-  const [results, setResults] = useState<LegalReferenceEntry[]>([]);
-  const [note, setNote] = useState<string>("");
+  const [results, setResults] = useState<LegalReferenceEntry[]>(initialResults);
+  const [note, setNote] = useState<string>(initialNote);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,7 +73,9 @@ export default function LegalReferenceExplorer({
   };
 
   useEffect(() => {
-    loadResults(initialQuery);
+    if (initialResults.length === 0) {
+      loadResults(initialQuery);
+    }
     // initialQuery/contract metadata define the first curated load for this contract.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
