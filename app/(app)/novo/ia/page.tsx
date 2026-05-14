@@ -4,8 +4,13 @@ import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import LegalReferenceExplorer from "@/components/legal/LegalReferenceExplorer";
 import Icon from "@/components/ui/Icon";
 import type { GeneratedContractDraft } from "@/lib/legal/generation";
+import {
+  buildSuggestedLegalQueries,
+  normalizeContractTypeForSearch,
+} from "@/lib/legal/search-context";
 
 type ReviewResponse = {
   provider: string;
@@ -26,6 +31,13 @@ type ReviewResponse = {
 
 type ClausesResponse = {
   provider: string;
+  clauseCoverage: Array<{
+    id: string;
+    title: string;
+    status: "present" | "missing_required" | "missing_recommended";
+    importance: "required" | "recommended";
+    riskIfMissing: "low" | "medium" | "high";
+  }>;
   suggestedClauses: Array<{
     id: string;
     title: string;
@@ -41,6 +53,7 @@ type GenerationResult = {
   clausesProvider: string;
   contract: GeneratedContractDraft;
   review: ReviewResponse["review"];
+  clauseCoverage: ClausesResponse["clauseCoverage"];
   suggestions: ClausesResponse["suggestedClauses"];
 };
 
@@ -72,6 +85,30 @@ export default function FlowIA() {
 
     return [...result.contract.clauses, ...appended];
   }, [addedClauseIds, result]);
+
+  const legalSearchContext = React.useMemo(() => {
+    if (!result) {
+      return null;
+    }
+
+    const clauseGaps = result.clauseCoverage
+      .filter((clause) => clause.status !== "present")
+      .map((clause) => clause.title);
+    const suggestedQueries = buildSuggestedLegalQueries({
+      contractType: result.contract.contractLabel,
+      clauseGaps,
+      findings: result.review.findings.map((finding) => finding.title),
+    });
+
+    return {
+      contractType: normalizeContractTypeForSearch(result.contract.contractType),
+      clauseIds: result.clauseCoverage
+        .filter((clause) => clause.status !== "present")
+        .map((clause) => clause.id),
+      suggestedQueries,
+      initialQuery: suggestedQueries[0] || result.contract.contractLabel,
+    };
+  }, [result]);
 
   const handleGenerate = async () => {
     setLoading(true);
@@ -139,6 +176,7 @@ export default function FlowIA() {
         clausesProvider: clausesPayload.provider,
         contract,
         review: reviewPayload.review,
+        clauseCoverage: clausesPayload.clauseCoverage,
         suggestions: clausesPayload.suggestedClauses,
       });
     } catch (requestError: any) {
@@ -424,6 +462,17 @@ export default function FlowIA() {
                 )}
               </div>
             </div>
+
+            {legalSearchContext ? (
+              <LegalReferenceExplorer
+                key={`${result.contract.contractType}-${legalSearchContext.initialQuery}`}
+                initialQuery={legalSearchContext.initialQuery}
+                contractType={legalSearchContext.contractType}
+                clauseIds={legalSearchContext.clauseIds}
+                suggestedQueries={legalSearchContext.suggestedQueries}
+                initialNote="Pesquisa beta baseada na base jurídica curada do Lex. Use como apoio à revisão antes de salvar o rascunho."
+              />
+            ) : null}
 
             <div className="card">
               <div className="card-title">Proximo passo</div>

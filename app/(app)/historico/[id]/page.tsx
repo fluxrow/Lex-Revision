@@ -11,6 +11,10 @@ import { getClicksignRuntimeStatus } from "@/lib/clicksign";
 import { fmtBRL, STATUS_LABELS } from "@/lib/data";
 import { getContractDetail } from "@/lib/data.server";
 import { searchLegalReferences } from "@/lib/legal/references";
+import {
+  buildSuggestedLegalQueries,
+  normalizeContractTypeForSearch,
+} from "@/lib/legal/search-context";
 
 export default async function ContractDetailPage({
   params,
@@ -639,48 +643,6 @@ function formatDateTime(value: string) {
 
 function beautifySource(value: string) {
   return value.replaceAll("_", " ");
-}
-
-function normalizeContractTypeForSearch(value: string) {
-  const normalized = value
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .toLowerCase()
-    .trim();
-
-  if (normalized.includes("servic")) {
-    return "service_agreement";
-  }
-  if (normalized.includes("confidencial") || normalized.includes("nda")) {
-    return "nda";
-  }
-  if (normalized.includes("loca")) {
-    return "lease";
-  }
-  if (normalized.includes("trabalho") || normalized.includes("emprego")) {
-    return "employment";
-  }
-  return "general";
-}
-
-function buildSuggestedLegalQueries({
-  contractType,
-  clauseGaps,
-  findings,
-}: {
-  contractType: string;
-  clauseGaps: string[];
-  findings: string[];
-}) {
-  const suggestions = [
-    `${contractType} boa-fé objetiva`,
-    ...clauseGaps.slice(0, 2).map((item) => `${item} contrato`),
-    ...findings.slice(0, 1).map((item) => item),
-  ]
-    .map((item) => item.trim())
-    .filter(Boolean);
-
-  return Array.from(new Set(suggestions)).slice(0, 4);
 }
 
 function normalizeRiskKey(value: string) {
