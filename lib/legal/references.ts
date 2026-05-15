@@ -13,6 +13,12 @@ export type LegalReferenceEntry = {
   relatedClauseIds: string[];
 };
 
+export type LegalReferenceContext = {
+  summary: string;
+  recommendedActions: string[];
+  caution: string;
+};
+
 const REFERENCE_LIBRARY: LegalReferenceEntry[] = [
   {
     id: "cc-113-interpretacao",
@@ -197,6 +203,69 @@ export function searchLegalReferences({
     .map((item) => item.entry);
 
   return ranked;
+}
+
+export function buildLegalReferenceContext({
+  query,
+  contractType,
+  clauseIds = [],
+  results,
+}: {
+  query: string;
+  contractType?: string | null;
+  clauseIds?: string[];
+  results: LegalReferenceEntry[];
+}): LegalReferenceContext {
+  const normalizedContractType = normalizeContractType(contractType);
+  const topResults = results.slice(0, 3);
+  const topTitles = topResults.map((item) => item.title).join(", ");
+  const hasDataProtection = clauseIds.includes("data_protection");
+  const hasTermination = clauseIds.includes("termination");
+  const hasPenalties = clauseIds.includes("penalties");
+  const hasForum = clauseIds.includes("forum");
+
+  const recommendedActions = new Set<string>();
+
+  if (hasTermination) {
+    recommendedActions.add("Explique rescisão, aviso prévio e efeitos financeiros do encerramento.");
+  }
+  if (hasPenalties) {
+    recommendedActions.add("Revise proporcionalidade da multa, base de cálculo e hipótese de redução.");
+  }
+  if (hasForum) {
+    recommendedActions.add("Confirme se a eleição de foro está clara e proporcional à relação contratual.");
+  }
+  if (hasDataProtection) {
+    recommendedActions.add("Defina finalidade, papel das partes e medidas mínimas de proteção de dados.");
+  }
+
+  if (recommendedActions.size === 0 && topResults[0]) {
+    recommendedActions.add(`Use ${topResults[0].title.toLowerCase()} como eixo principal da revisão deste ponto.`);
+  }
+
+  if (recommendedActions.size === 1 && topResults[1]) {
+    recommendedActions.add(`Cruze a cláusula com ${topResults[1].legalBasis} para reduzir ambiguidade e risco operacional.`);
+  }
+
+  const contractLabel =
+    normalizedContractType === "service_agreement"
+      ? "prestação de serviços"
+      : normalizedContractType === "nda"
+        ? "confidencialidade"
+        : normalizedContractType === "lease"
+          ? "locação"
+          : normalizedContractType === "employment"
+            ? "trabalho"
+            : "contrato";
+
+  return {
+    summary: topTitles
+      ? `Para este ${contractLabel}, o Lex priorizou ${topTitles} como base prática para orientar a revisão ligada à busca "${query || contractLabel}".`
+      : `O Lex ainda não encontrou referências curadas suficientes para orientar esta busca em ${contractLabel}.`,
+    recommendedActions: Array.from(recommendedActions).slice(0, 3),
+    caution:
+      "Use estas referências como apoio operacional. Antes de fechar a redação final, confirme aderência ao caso concreto, à negociação e à jurisdição aplicável.",
+  };
 }
 
 function normalize(value: string) {

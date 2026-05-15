@@ -10,7 +10,10 @@ import Icon from "@/components/ui/Icon";
 import { getClicksignRuntimeStatus } from "@/lib/clicksign";
 import { fmtBRL, STATUS_LABELS } from "@/lib/data";
 import { getContractDetail } from "@/lib/data.server";
-import { searchLegalReferences } from "@/lib/legal/references";
+import {
+  buildLegalReferenceContext,
+  searchLegalReferences,
+} from "@/lib/legal/references";
 import {
   buildSuggestedLegalQueries,
   normalizeContractTypeForSearch,
@@ -51,6 +54,12 @@ export default async function ContractDetailPage({
     query: initialLegalQuery,
     contractType: normalizedContractType,
     clauseIds: clauseGaps.map((clause) => clause.id),
+  });
+  const initialLegalContext = buildLegalReferenceContext({
+    query: initialLegalQuery,
+    contractType: normalizedContractType,
+    clauseIds: clauseGaps.map((clause) => clause.id),
+    results: initialLegalResults,
   });
 
   return (
@@ -227,6 +236,7 @@ export default async function ContractDetailPage({
             suggestedQueries={suggestedLegalQueries}
             initialResults={initialLegalResults}
             initialNote="Pesquisa beta baseada na base jurídica curada do Lex. Não representa jurisprudência live nem substitui validação humana."
+            initialContext={initialLegalContext}
           />
         </div>
 

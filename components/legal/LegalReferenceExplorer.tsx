@@ -14,6 +14,12 @@ type LegalReferenceEntry = {
   sourceLabel: string;
 };
 
+type LegalReferenceContext = {
+  summary: string;
+  recommendedActions: string[];
+  caution: string;
+};
+
 type LegalReferenceExplorerProps = {
   initialQuery: string;
   contractType: string;
@@ -21,6 +27,7 @@ type LegalReferenceExplorerProps = {
   suggestedQueries: string[];
   initialResults?: LegalReferenceEntry[];
   initialNote?: string;
+  initialContext?: LegalReferenceContext | null;
 };
 
 export default function LegalReferenceExplorer({
@@ -30,10 +37,12 @@ export default function LegalReferenceExplorer({
   suggestedQueries,
   initialResults = [],
   initialNote = "",
+  initialContext = null,
 }: LegalReferenceExplorerProps) {
   const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<LegalReferenceEntry[]>(initialResults);
   const [note, setNote] = useState<string>(initialNote);
+  const [context, setContext] = useState<LegalReferenceContext | null>(initialContext);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,9 +73,18 @@ export default function LegalReferenceExplorer({
 
       setResults(Array.isArray(payload.results) ? payload.results : []);
       setNote(typeof payload.note === "string" ? payload.note : "");
+      setContext(
+        payload.context &&
+          typeof payload.context.summary === "string" &&
+          Array.isArray(payload.context.recommendedActions) &&
+          typeof payload.context.caution === "string"
+          ? payload.context
+          : null
+      );
     } catch (searchError: any) {
       setError(searchError.message || "Nao foi possivel carregar as referencias.");
       setResults([]);
+      setContext(null);
     } finally {
       setLoading(false);
     }
@@ -145,6 +163,36 @@ export default function LegalReferenceExplorer({
           }}
         >
           {note}
+        </div>
+      ) : null}
+
+      {context ? (
+        <div
+          style={{
+            marginTop: 14,
+            padding: "14px 16px",
+            borderRadius: 12,
+            border: "1px solid var(--border)",
+            background: "var(--surface-2)",
+          }}
+        >
+          <div className="field-label" style={{ marginBottom: 8 }}>
+            Leitura contextual do Lex
+          </div>
+          <div style={{ lineHeight: 1.55, marginBottom: 10 }}>{context.summary}</div>
+          {context.recommendedActions.length > 0 ? (
+            <div className="col" style={{ gap: 8, marginBottom: 10 }}>
+              {context.recommendedActions.map((action, index) => (
+                <div key={`${action}-${index}`} className="row" style={{ alignItems: "flex-start", gap: 10 }}>
+                  <span className="chip chip-accent">{index + 1}</span>
+                  <div style={{ lineHeight: 1.5 }}>{action}</div>
+                </div>
+              ))}
+            </div>
+          ) : null}
+          <div className="muted" style={{ lineHeight: 1.55, fontSize: 12.5 }}>
+            {context.caution}
+          </div>
         </div>
       ) : null}
 
