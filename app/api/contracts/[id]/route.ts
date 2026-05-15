@@ -97,6 +97,7 @@ export async function PATCH(
         payload.changeSummary
       ),
       created_by: account.user.id,
+      created_by_name: account.membership.full_name || account.user.email || "Equipe Lex",
     });
     if (versionInsert.error && !isVersionCompatError(versionInsert.error.message)) {
       throw versionInsert.error;

@@ -130,6 +130,7 @@ export type ContractDetail = {
     contractType: string;
     body: string;
     changeSummary: string | null;
+    authorName: string | null;
     createdAt: string;
     diff: ContractVersionDiffSummary;
   }>;
@@ -475,7 +476,7 @@ export async function getContractDetail(contractId: string): Promise<ContractDet
 
     const { data: versions } = await supabase
       .from("contract_versions")
-      .select("id, version_number, name, contract_type, body_md, change_summary, created_at")
+      .select("id, version_number, name, contract_type, body_md, change_summary, created_by_name, created_at")
       .eq("contract_id", contractId)
       .order("version_number", { ascending: false });
 
@@ -779,6 +780,7 @@ function buildMockContractDetail(contractId: string): ContractDetail | null {
         contractType: fallback.type,
         body,
         changeSummary: "Versão de demonstração carregada no preview.",
+        authorName: "Preview Lex",
         createdAt: `${fallback.updated}T09:00:00.000Z`,
         diff: buildContractVersionDiff("", body),
       },
@@ -1032,6 +1034,7 @@ function buildVersionHistory(versions: any[], contract: any): ContractDetail["ve
         contractType: String(version.contract_type || contract.contract_type || "Geral"),
         body: String(version.body_md || ""),
         changeSummary: version.change_summary ? String(version.change_summary) : null,
+        authorName: version.created_by_name ? String(version.created_by_name) : null,
         createdAt: String(version.created_at || contract.updated_at || contract.created_at || new Date().toISOString()),
       }))
     : [];
@@ -1046,6 +1049,7 @@ function buildVersionHistory(versions: any[], contract: any): ContractDetail["ve
         contractType: String(contract.contract_type || "Geral"),
         body,
         changeSummary: "Versão inicial espelhada do contrato atual.",
+        authorName: null,
         createdAt: String(contract.created_at || new Date().toISOString()),
         diff: buildContractVersionDiff("", body),
       },
