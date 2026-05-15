@@ -1,4 +1,5 @@
 import { MOCK_CLIENTS, MOCK_CONTRACTS, MOCK_TEMPLATES } from "@/lib/data";
+import { buildContractVersionDiff, type ContractVersionDiffSummary } from "@/lib/contracts/versions";
 import {
   analyzeContractDocument,
   buildClauseSuggestionsFallback,
@@ -121,6 +122,16 @@ export type ContractDetail = {
     createdAt: string;
     title: string;
     description: string;
+  }>;
+  versions: Array<{
+    id: string;
+    versionNumber: number;
+    name: string;
+    contractType: string;
+    body: string;
+    changeSummary: string | null;
+    createdAt: string;
+    diff: ContractVersionDiffSummary;
   }>;
   isFallback: boolean;
 };
@@ -462,6 +473,12 @@ export async function getContractDetail(contractId: string): Promise<ContractDet
       .limit(1)
       .maybeSingle();
 
+    const { data: versions } = await supabase
+      .from("contract_versions")
+      .select("id, version_number, name, contract_type, body_md, change_summary, created_at")
+      .eq("contract_id", contractId)
+      .order("version_number", { ascending: false });
+
     const signatureRequestIds = Array.isArray(contract.signature_requests)
       ? contract.signature_requests.map((request: any) => String(request.id))
       : [];
@@ -486,13 +503,18 @@ export async function getContractDetail(contractId: string): Promise<ContractDet
     return mapContractDetail(contract, analysisVersion, [
       ...(contractActivityLogs || []),
       ...(signatureActivityLogs || []),
-    ]);
+    ], versions || []);
   } catch {
     return buildMockContractDetail(contractId);
   }
 }
 
-function mapContractDetail(contract: any, analysisVersion: any, activityLogs: any[] = []): ContractDetail {
+function mapContractDetail(
+  contract: any,
+  analysisVersion: any,
+  activityLogs: any[] = [],
+  versions: any[] = []
+): ContractDetail {
   const structured = coerceStructuredPayload(contract.structured_payload, contract.body_md || contract.body_html || "");
   const analysisPayload = isRecord(analysisVersion?.analysis_payload) ? analysisVersion.analysis_payload : {};
   const review = isRecord(analysisPayload.review) ? analysisPayload.review : {};
@@ -529,6 +551,7 @@ function mapContractDetail(contract: any, analysisVersion: any, activityLogs: an
             : [],
         }))
     : [];
+  const versionHistory = buildVersionHistory(versions, contract);
 
   return {
     id: contract.id,
@@ -618,6 +641,7 @@ function mapContractDetail(contract: any, analysisVersion: any, activityLogs: an
           })
           .map((entry: any) => mapActivityLogEntry(entry))
       : [],
+    versions: versionHistory,
     isFallback: false,
   };
 }
@@ -747,6 +771,18 @@ function buildMockContractDetail(contractId: string): ContractDetail | null {
         description: "Este histórico veio do preview controlado e não representa um evento do banco remoto.",
       },
     ],
+    versions: [
+      {
+        id: `mock-version-${fallback.id}-1`,
+        versionNumber: 1,
+        name: fallback.name,
+        contractType: fallback.type,
+        body,
+        changeSummary: "Versão de demonstração carregada no preview.",
+        createdAt: `${fallback.updated}T09:00:00.000Z`,
+        diff: buildContractVersionDiff("", body),
+      },
+    ],
     isFallback: true,
   };
 }
@@ -776,6 +812,19 @@ function mapActivityLogEntry(entry: any) {
         createdAt: String(entry.created_at || new Date().toISOString()),
         title: "Contrato criado",
         description: `Origem ${beautifyActivitySource(source || "manual")} · tipo ${contractType || "geral"}.`,
+      };
+    case "contract.updated":
+      return {
+        id: String(entry.id),
+        action,
+        resourceType: String(entry.resource_type || "contract"),
+        resourceId: entry.resource_id ? String(entry.resource_id) : null,
+        createdAt: String(entry.created_at || new Date().toISOString()),
+        title: "Nova versão salva",
+        description:
+          typeof metadata.change_summary === "string" && metadata.change_summary.trim().length > 0
+            ? metadata.change_summary
+            : `Versão ${typeof metadata.version_number === "number" ? metadata.version_number : "nova"} registrada com revisão do contrato.`,
       };
     case "signature_request.created":
       return {
@@ -972,4 +1021,47 @@ function getTemplateAccent(category?: string | null, name?: string | null) {
 
 function isRecord(value: unknown): value is Record<string, any> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function buildVersionHistory(versions: any[], contract: any): ContractDetail["versions"] {
+  const normalized = Array.isArray(versions)
+    ? versions.map((version: any) => ({
+        id: String(version.id),
+        versionNumber: Number(version.version_number || 1),
+        name: String(version.name || contract.name || "Contrato"),
+        contractType: String(version.contract_type || contract.contract_type || "Geral"),
+        body: String(version.body_md || ""),
+        changeSummary: version.change_summary ? String(version.change_summary) : null,
+        createdAt: String(version.created_at || contract.updated_at || contract.created_at || new Date().toISOString()),
+      }))
+    : [];
+
+  if (normalized.length === 0) {
+    const body = String(contract.body_md || contract.body_html || "");
+    return [
+      {
+        id: `contract-live-${contract.id}`,
+        versionNumber: 1,
+        name: String(contract.name || "Contrato"),
+        contractType: String(contract.contract_type || "Geral"),
+        body,
+        changeSummary: "Versão inicial espelhada do contrato atual.",
+        createdAt: String(contract.created_at || new Date().toISOString()),
+        diff: buildContractVersionDiff("", body),
+      },
+    ];
+  }
+
+  const chronological = [...normalized].sort((left, right) => left.versionNumber - right.versionNumber);
+
+  return chronological
+    .map((version, index) => {
+      const previousBody = index === 0 ? "" : chronological[index - 1].body;
+
+      return {
+        ...version,
+        diff: buildContractVersionDiff(previousBody, version.body),
+      };
+    })
+    .sort((left, right) => right.versionNumber - left.versionNumber);
 }

@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import ContractDetailActions from "@/components/contracts/ContractDetailActions";
+import ContractRevisionEditor from "@/components/contracts/ContractRevisionEditor";
+import ContractVersionHistory from "@/components/contracts/ContractVersionHistory";
 import LegalReferenceExplorer from "@/components/legal/LegalReferenceExplorer";
 import SendForSignatureCard from "@/components/signatures/SendForSignatureCard";
 import SignatureLinkActions from "@/components/signatures/SignatureLinkActions";
@@ -84,6 +86,7 @@ export default async function ContractDetailPage({
           contractName={contract.name}
           contractBody={contract.body}
           hasSignatureFlow={Boolean(hasOpenSignatureFlow)}
+          hasVersions={contract.versions.length > 0}
         />
       </div>
 
@@ -194,6 +197,17 @@ export default async function ContractDetailPage({
               </div>
             )}
           </div>
+
+          <ContractRevisionEditor
+            contractId={contract.id}
+            initialName={contract.name}
+            initialContractType={contract.contractType}
+            initialBody={contract.body}
+            initialVariableValues={contract.variableValues}
+            disabled={contract.isFallback}
+          />
+
+          <ContractVersionHistory versions={contract.versions} />
 
           <div className="card">
             <div className="card-title">Linha do tempo</div>

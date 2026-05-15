@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { buildContractIntelligence } from "@/lib/contracts/ingestion";
+import { buildVersionChangeSummary } from "@/lib/contracts/versions";
 import { getCurrentAccount } from "@/lib/auth/account";
 import { isSupabaseEnvError } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
@@ -97,6 +98,21 @@ export async function POST(request: Request) {
       throw contractError || new Error("Nao foi possivel salvar o contrato.");
     }
 
+    const versionInsert = await supabase.from("contract_versions").insert({
+      contract_id: contract.id,
+      organization_id: account.organization.id,
+      version_number: 1,
+      name: payload.name,
+      contract_type: payload.contractType,
+      body_md: payload.body,
+      structured_payload: intelligence.structuredPayload,
+      change_summary: buildVersionChangeSummary("", payload.body, "Versão inicial criada pelo Lex."),
+      created_by: account.user.id,
+    });
+    if (versionInsert.error && !isVersionCompatError(versionInsert.error.message)) {
+      throw versionInsert.error;
+    }
+
     await supabase.from("activity_logs").insert({
       organization_id: account.organization.id,
       user_id: account.user.id,
@@ -189,6 +205,16 @@ function isAnalysisCompatError(message?: string) {
   }
 
   return ["contract_analysis_versions", "analysis_payload", "overall_risk"].some((token) =>
+    message.includes(token)
+  );
+}
+
+function isVersionCompatError(message?: string) {
+  if (!message) {
+    return false;
+  }
+
+  return ["contract_versions", "version_number", "structured_payload"].some((token) =>
     message.includes(token)
   );
 }

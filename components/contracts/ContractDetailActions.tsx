@@ -10,11 +10,13 @@ export default function ContractDetailActions({
   contractName,
   contractBody,
   hasSignatureFlow,
+  hasVersions,
 }: {
   contractId: string;
   contractName: string;
   contractBody: string;
   hasSignatureFlow: boolean;
+  hasVersions: boolean;
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -52,6 +54,10 @@ export default function ContractDetailActions({
         <Icon name="copy" size={14} />
         {copied ? "Copiado" : "Copiar"}
       </button>
+      <Link href="#versions" className="btn btn-secondary" style={{ textDecoration: "none" }}>
+        <Icon name="history" size={14} />
+        {hasVersions ? "Versões" : "Histórico"}
+      </Link>
       <Link
         href={hasSignatureFlow ? "/assinaturas" : "#assinaturas"}
         className="btn btn-primary"
