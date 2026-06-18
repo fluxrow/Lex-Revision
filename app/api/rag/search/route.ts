@@ -14,7 +14,7 @@ import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 
 const VOYAGE_API_URL = "https://api.voyageai.com/v1/embeddings";
-const VOYAGE_MODEL = "voyage-3-lite";
+const VOYAGE_MODEL = "voyage-3";
 
 const schema = z.object({
   query: z.string().min(3).max(2000),

@@ -32,7 +32,7 @@ import { promises as fs } from "node:fs";
 // ──────────────────────────────────────────────────────────────────────────
 
 const VOYAGE_API_URL = "https://api.voyageai.com/v1/embeddings";
-const VOYAGE_MODEL = "voyage-3-lite"; // 1024 dim, Portuguese-optimized
+const VOYAGE_MODEL = "voyage-3"; // 1024 dim, Portuguese-optimized
 const CLAUDE_MODEL = "claude-sonnet-4-6";
 const EMBEDDING_BATCH_SIZE = 8; // Voyage permite até 128 por call
 
