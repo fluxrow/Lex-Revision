@@ -388,6 +388,79 @@ export default function HomePage() {
               </div>
             </div>
           </section>
+
+          <footer
+            style={{
+              borderTop: "1px solid var(--border)",
+              padding: "32px 0 40px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 20,
+            }}
+          >
+            <div
+              className="row"
+              style={{
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: 16,
+              }}
+            >
+              <div className="row" style={{ gap: 12, alignItems: "center" }}>
+                <div className="sidebar-logo" style={{ padding: 0 }}>
+                  <div className="sidebar-logo-mark">L</div>
+                  <div className="sidebar-logo-text">
+                    Lex<span className="legal"> Revision</span>
+                  </div>
+                </div>
+                <span className="muted" style={{ fontSize: 12 }}>
+                  © 2026 Lex Revision®
+                </span>
+              </div>
+
+              <div className="row" style={{ gap: 18, flexWrap: "wrap" }}>
+                <Link href="/privacidade" className="muted" style={{ fontSize: 13 }}>
+                  Privacidade
+                </Link>
+                <Link href="/termos" className="muted" style={{ fontSize: 13 }}>
+                  Termos
+                </Link>
+                <a href="#precos" className="muted" style={{ fontSize: 13 }}>
+                  Planos
+                </a>
+                <Link href="/login" className="muted" style={{ fontSize: 13 }}>
+                  Entrar
+                </Link>
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                paddingTop: 12,
+                borderTop: "1px dashed var(--border)",
+              }}
+            >
+              <a
+                href="https://fluxrow.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="muted"
+                style={{
+                  fontSize: 12,
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                  fontWeight: 600,
+                  opacity: 0.7,
+                }}
+              >
+                an original by <span style={{ color: "var(--accent)" }}>Fluxrow</span>
+              </a>
+            </div>
+          </footer>
         </div>
       </main>
     </>
