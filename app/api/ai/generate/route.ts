@@ -92,8 +92,10 @@ export async function POST(request: Request) {
       content: parsed?.body ?? rawContent ?? fallback.body,
     };
 
-    // 2) Cache save (fire-and-forget — não bloqueia response)
-    void saveCache({
+    // 2) Cache save — await em vez de void.
+    // O Vercel serverless termina a função após o response, e o fire-and-forget
+    // era cortado em ~70% dos casos. Custo de ~100ms para garantir cache em 100%.
+    await saveCache({
       cacheKey,
       queryText: payload.prompt,
       retrievalTemplateIds: rag?.matches.map((m) => m.id) ?? [],

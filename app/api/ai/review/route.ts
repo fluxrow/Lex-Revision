@@ -127,7 +127,8 @@ export async function POST(request: Request) {
       content: rawContent,
     };
 
-    void saveCache({
+    // await garante cache em 100% (fire-and-forget é cortado pelo Vercel serverless)
+    await saveCache({
       cacheKey,
       queryText: buildReviewCacheInput(payload.documentContent, payload.contractTypeHint),
       retrievalTemplateIds: rag?.matches.map((m) => m.id) ?? [],
