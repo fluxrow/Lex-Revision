@@ -7,6 +7,11 @@ import {
   buildGeneratedContractFallback,
   type GeneratedContractDraft,
 } from "@/lib/legal/generation";
+import {
+  buildRagGenerationContext,
+  retrieveRagTemplates,
+  type RagRetrievalResult,
+} from "@/lib/rag/templates";
 
 const generateSchema = z.object({
   prompt: z.string().trim().min(12),
@@ -17,15 +22,29 @@ export async function POST(request: Request) {
     const payload = generateSchema.parse(await request.json());
     const fallback = buildGeneratedContractFallback(payload.prompt);
     const anthropic = getAnthropicClient();
+    let rag: RagRetrievalResult | null = null;
+
+    try {
+      rag = await retrieveRagTemplates({
+        query: payload.prompt,
+        k: 3,
+        threshold: 0.38,
+      });
+    } catch (ragError: any) {
+      console.warn("RAG retrieval skipped:", ragError.message);
+    }
 
     if (!anthropic) {
       return NextResponse.json({
         status: "generated",
         provider: "fallback",
+        rag,
         contract: fallback,
         content: fallback.body,
       });
     }
+
+    const ragContext = buildRagGenerationContext(rag?.matches ?? []);
 
     const msg = await anthropic.messages.create({
       model: "claude-sonnet-4-6",
@@ -36,6 +55,7 @@ export async function POST(request: Request) {
         "Responda somente JSON valido neste formato:",
         '{"title":"...","contractType":"general|service_agreement|nda|lease|employment","contractLabel":"...","summary":"...","variables":["..."],"clauses":[{"id":"...","number":"1","title":"...","body":"..."}],"body":"..."}',
         "Nao invente jurisprudencia nem cite base legal sem necessidade.",
+        ragContext || "Nenhum contexto RAG forte foi recuperado para este pedido. Gere normalmente.",
       ].join("\n\n"),
       messages: [
         {
@@ -50,7 +70,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       status: "generated",
-      provider: "anthropic",
+      provider: rag?.matches.length ? "anthropic_rag" : "anthropic",
+      rag,
       contract: parsed ?? fallback,
       content: parsed?.body ?? rawContent ?? fallback.body,
     });
