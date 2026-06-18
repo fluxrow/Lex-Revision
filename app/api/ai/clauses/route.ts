@@ -25,7 +25,9 @@ const clausesSchema = z.object({
 });
 
 const MODEL = "claude-sonnet-4-6";
-const ROUTE_NS = "clauses";
+// v2: post Sprint 6 (granular ragClauses adicionado). Mudar namespace força
+// refresh do cache pra que hits sirvam respostas com ragClauses populado.
+const ROUTE_NS = "clauses_v2";
 
 function buildRagQuery(documentContent: string, contractLabel?: string, hint?: string): string {
   const parts = [hint, contractLabel, documentContent.slice(0, 500)].filter(Boolean);

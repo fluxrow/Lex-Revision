@@ -10,6 +10,11 @@ import {
   retrieveRagTemplates,
   type RagRetrievalResult,
 } from "@/lib/rag/templates";
+import {
+  buildRagClausesContext,
+  retrieveRagClauses,
+  type RagClauseRetrievalResult,
+} from "@/lib/rag/clauses";
 import { buildCacheKey, lookupCache, saveCache } from "@/lib/rag/cache";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -20,7 +25,9 @@ const reviewSchema = z.object({
 });
 
 const MODEL = "claude-sonnet-4-6";
-const ROUTE_NS = "review";
+// v2: post Sprint 7 (RAG granular + templates). Mudar namespace força refresh
+// do cache, garantindo que respostas servidas tenham o novo ragClauses field.
+const ROUTE_NS = "review_v2";
 
 /**
  * Constrói a query para retrieval RAG a partir do contrato + hint.
@@ -64,36 +71,43 @@ export async function POST(request: Request) {
     );
     const fallback = buildReviewFallback(analysis);
     const anthropic = getAnthropicClient();
-    let rag: RagRetrievalResult | null = null;
 
-    try {
-      const ragQuery = buildRagQuery(
-        payload.documentContent,
-        analysis.contractLabel,
-        payload.contractTypeHint
-      );
-      rag = await retrieveRagTemplates({
-        query: ragQuery,
-        k: 3,
-        threshold: 0.38,
-      });
-    } catch (ragError: any) {
-      console.warn("RAG retrieval skipped (review):", ragError.message);
-    }
+    // Dois retrievals em paralelo: templates (estrutural) + cláusulas (granular)
+    let ragTemplates: RagRetrievalResult | null = null;
+    let ragClauses: RagClauseRetrievalResult | null = null;
+
+    const ragQuery = buildRagQuery(
+      payload.documentContent,
+      analysis.contractLabel,
+      payload.contractTypeHint
+    );
+
+    const [tmplResult, clauseResult] = await Promise.allSettled([
+      retrieveRagTemplates({ query: ragQuery, k: 2, threshold: 0.38 }),
+      retrieveRagClauses({ query: ragQuery, k: 8, threshold: 0.32 }),
+    ]);
+
+    if (tmplResult.status === "fulfilled") ragTemplates = tmplResult.value;
+    else console.warn("RAG templates skipped (review):", tmplResult.reason?.message);
+
+    if (clauseResult.status === "fulfilled") ragClauses = clauseResult.value;
+    else console.warn("RAG clauses skipped (review):", clauseResult.reason?.message);
 
     if (!anthropic) {
       return NextResponse.json({
         status: "reviewed",
         provider: "heuristic",
         analysis,
-        rag,
+        rag: ragTemplates,
+        ragClauses,
         cache: { hit: false, cache_key: cacheKey },
         review: fallback,
         content: JSON.stringify(fallback, null, 2),
       });
     }
 
-    const ragContext = buildRagGenerationContext(rag?.matches ?? []);
+    const templateContext = buildRagGenerationContext(ragTemplates?.matches ?? []);
+    const clausesContext = buildRagClausesContext(ragClauses?.matches ?? []);
 
     const msg = await anthropic.messages.create({
       model: MODEL,
@@ -102,11 +116,16 @@ export async function POST(request: Request) {
         "Voce e um revisor juridico do Lex Revision especializado em contratos brasileiros.",
         "Analise risco contratual de forma estruturada, auditavel e objetiva.",
         "Nunca invente jurisprudencia. Cite base legal apenas quando ela for realmente util ao risco apontado.",
-        "Use o contexto RAG (templates similares) APENAS para comparar estrutura e identificar lacunas — nunca copie clausulas literalmente.",
+        "Use o contexto RAG (templates estruturais + clausulas granulares da biblioteca BR) para:",
+        "- Identificar com precisao quais riscos sao tipicos do tipo de contrato",
+        "- Apontar lacunas concretas usando metadata clause_type e risk_level",
+        "- Marcar risco final 'high' quando uma clausula granular de risk=high estiver ausente",
+        "- Nunca copiar texto literalmente",
         "Responda somente JSON valido no formato:",
         '{"executiveSummary":"...","overallRisk":"low|medium|high","findings":[{"title":"...","risk":"low|medium|high","trecho":"...","motivo":"...","sugestao":"...","legalBasis":"opcional"}],"nextActions":["..."]}',
         buildKnowledgeBaseContext(analysis),
-        ragContext || "Nenhum contexto RAG forte foi recuperado para este contrato. Avalie apenas pelo conteudo.",
+        templateContext || "Nenhum template estrutural similar foi recuperado.",
+        clausesContext || "Nenhuma clausula granular foi recuperada.",
       ].join("\n\n"),
       messages: [
         {
@@ -122,7 +141,8 @@ export async function POST(request: Request) {
     const responseBody = {
       status: "reviewed" as const,
       analysis,
-      rag,
+      rag: ragTemplates,
+      ragClauses,
       review: parsed ?? fallback,
       content: rawContent,
     };
@@ -131,16 +151,27 @@ export async function POST(request: Request) {
     await saveCache({
       cacheKey,
       queryText: buildReviewCacheInput(payload.documentContent, payload.contractTypeHint),
-      retrievalTemplateIds: rag?.matches.map((m) => m.id) ?? [],
+      retrievalTemplateIds: [
+        ...(ragTemplates?.matches.map((m) => m.id) ?? []),
+        ...(ragClauses?.matches.map((m) => m.id) ?? []),
+      ],
       llmResponse: responseBody,
       llmModel: MODEL,
       tokensInput: msg.usage?.input_tokens,
       tokensOutput: msg.usage?.output_tokens,
     });
 
+    const hasClauses = (ragClauses?.matches.length ?? 0) > 0;
+    const hasTemplates = (ragTemplates?.matches.length ?? 0) > 0;
+    const providerTag = hasClauses
+      ? "anthropic_rag_clauses"
+      : hasTemplates
+      ? "anthropic_rag"
+      : "anthropic";
+
     return NextResponse.json({
       ...responseBody,
-      provider: rag?.matches.length ? "anthropic_rag" : "anthropic",
+      provider: providerTag,
       cache: { hit: false, cache_key: cacheKey },
     });
   } catch (error: any) {
