@@ -5,6 +5,11 @@ import {
   buildKnowledgeBaseContext,
   buildReviewFallback,
 } from "@/lib/legal/analysis";
+import {
+  buildRagGenerationContext,
+  retrieveRagTemplates,
+  type RagRetrievalResult,
+} from "@/lib/rag/templates";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -12,6 +17,16 @@ const reviewSchema = z.object({
   documentContent: z.string().min(30),
   contractTypeHint: z.string().optional(),
 });
+
+/**
+ * Constrói a query para retrieval RAG a partir do contrato + hint.
+ * Mistura tipo de contrato (se conhecido) + primeiros 600 chars do documento
+ * para o embedding semântico capturar a "intenção" do contrato.
+ */
+function buildRagQuery(documentContent: string, contractLabel?: string, hint?: string): string {
+  const parts = [hint, contractLabel, documentContent.slice(0, 600)].filter(Boolean);
+  return parts.join(" — ");
+}
 
 export async function POST(request: Request) {
   try {
@@ -22,16 +37,35 @@ export async function POST(request: Request) {
     );
     const fallback = buildReviewFallback(analysis);
     const anthropic = getAnthropicClient();
+    let rag: RagRetrievalResult | null = null;
+
+    try {
+      const ragQuery = buildRagQuery(
+        payload.documentContent,
+        analysis.contractLabel,
+        payload.contractTypeHint
+      );
+      rag = await retrieveRagTemplates({
+        query: ragQuery,
+        k: 3,
+        threshold: 0.38,
+      });
+    } catch (ragError: any) {
+      console.warn("RAG retrieval skipped (review):", ragError.message);
+    }
 
     if (!anthropic) {
       return NextResponse.json({
         status: "reviewed",
         provider: "heuristic",
         analysis,
+        rag,
         review: fallback,
         content: JSON.stringify(fallback, null, 2),
       });
     }
+
+    const ragContext = buildRagGenerationContext(rag?.matches ?? []);
 
     const msg = await anthropic.messages.create({
       model: "claude-sonnet-4-6",
@@ -40,9 +74,11 @@ export async function POST(request: Request) {
         "Voce e um revisor juridico do Lex Revision especializado em contratos brasileiros.",
         "Analise risco contratual de forma estruturada, auditavel e objetiva.",
         "Nunca invente jurisprudencia. Cite base legal apenas quando ela for realmente util ao risco apontado.",
+        "Use o contexto RAG (templates similares) APENAS para comparar estrutura e identificar lacunas — nunca copie clausulas literalmente.",
         "Responda somente JSON valido no formato:",
         '{"executiveSummary":"...","overallRisk":"low|medium|high","findings":[{"title":"...","risk":"low|medium|high","trecho":"...","motivo":"...","sugestao":"...","legalBasis":"opcional"}],"nextActions":["..."]}',
         buildKnowledgeBaseContext(analysis),
+        ragContext || "Nenhum contexto RAG forte foi recuperado para este contrato. Avalie apenas pelo conteudo.",
       ].join("\n\n"),
       messages: [
         {
@@ -57,8 +93,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       status: "reviewed",
-      provider: "anthropic",
+      provider: rag?.matches.length ? "anthropic_rag" : "anthropic",
       analysis,
+      rag,
       review: parsed ?? fallback,
       content: rawContent,
     });
