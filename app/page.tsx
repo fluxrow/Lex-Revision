@@ -3,51 +3,51 @@ import Icon from "@/components/ui/Icon";
 import Link from "next/link";
 
 const highlights = [
-  "Upload de .docx com variáveis detectadas",
-  "IA para gerar, revisar e traduzir contratos",
-  "Assinatura digital integrada no mesmo fluxo",
-  "Biblioteca de modelos para o escritório inteiro",
+  "Importa seu modelo de contrato em .docx e detecta as variáveis",
+  "IA jurídica em português gera, revisa e identifica cláusulas faltantes",
+  "Assinatura digital ICP-Brasil — cliente assina pelo celular em 1 clique",
+  "Biblioteca de modelos compartilhada com todo o escritório",
 ];
 
 const metrics = [
-  { value: "2 min", label: "para sair do rascunho ao contrato pronto" },
-  { value: "3 planos", label: "para solo, equipe e operação maior" },
-  { value: "1 fluxo", label: "de venda, cobrança e ativação de acesso" },
+  { value: "4h → 12min", label: "tempo médio para fechar um contrato" },
+  { value: "ICP-Brasil", label: "assinatura com validade jurídica plena" },
+  { value: "7 dias grátis", label: "sem cartão · cancela em 1 clique" },
 ];
 
 const features = [
   {
     icon: "upload",
-    title: "Suba um modelo e reutilize",
-    body: "Importe contratos existentes em .docx, detecte variáveis e transforme o que hoje está espalhado em Word num fluxo padronizado.",
+    title: "Seu modelo, 10x mais reaproveitável",
+    body: "Importa qualquer contrato em Word, marca as variáveis em segundos, e seu time inteiro passa a usar o mesmo padrão — sem mais 'qual é a versão certa?' no Drive.",
   },
   {
     icon: "sparkle",
-    title: "Use IA no ponto certo",
-    body: "Gere primeiras versões, revise cláusulas de risco e traduza conteúdo jurídico sem sair do ambiente do contrato.",
+    title: "Primeiro rascunho pronto em 30 segundos",
+    body: "IA jurídica nativa em português que gera contratos completos, revisa contra cláusulas-padrão do mercado brasileiro e identifica lacunas críticas. Você só revisa o que importa.",
   },
   {
     icon: "pen",
-    title: "Feche no mesmo lugar",
-    body: "Envie para assinatura digital, acompanhe status dos signatários e concentre histórico, contratos e faturamento num único produto.",
+    title: "Cliente assina pelo celular, na mesma reunião",
+    body: "Assinatura ICP-Brasil integrada. Você manda o link, ele clica, assina, pronto. Sem trocar de ferramenta, sem PDF perdido no e-mail, sem esperar 3 semanas.",
   },
 ];
 
 const steps = [
   {
     id: "01",
-    title: "Escolha como começar",
-    body: "Upload de modelo, biblioteca interna ou geração guiada por IA.",
+    title: "Crie o contrato em 3 cliques",
+    body: "Suba seu modelo, escolha da biblioteca ou peça pra IA gerar do zero.",
   },
   {
     id: "02",
-    title: "Preencha e revise",
-    body: "Ajuste variáveis, refine cláusulas e valide o texto com apoio da IA.",
+    title: "Revise sem digitar do zero",
+    body: "A IA já preencheu, revisou contra padrões e sinalizou riscos. Você só ajusta o que precisa.",
   },
   {
     id: "03",
-    title: "Envie para assinatura",
-    body: "Acompanhe abertura, visualização e assinatura sem trocar de ferramenta.",
+    title: "Envie e feche o negócio",
+    body: "Link de assinatura no WhatsApp do cliente. Assina pelo celular. Você é notificado na hora.",
   },
 ];
 
@@ -221,7 +221,7 @@ export default function HomePage() {
 
             <div className="row" style={{ gap: 10 }}>
               <a href="#precos" className="btn btn-primary">
-                Ver planos
+                Começar grátis
               </a>
               <Link href="/login" className="btn btn-ghost">
                 Já sou cliente
@@ -231,18 +231,18 @@ export default function HomePage() {
 
           <section className="marketing-hero">
             <div>
-              <span className="chip chip-accent">Plataforma para escritórios que precisam escalar contratos</span>
+              <span className="chip chip-accent">Para advogados que cansaram do Word</span>
               <h1 className="marketing-headline">
-                Contratos prontos em minutos, não em horas.
+                Pare de redigir contratos no Word.
               </h1>
               <p className="marketing-copy">
-                O Lex Revision junta modelo, IA, revisão e assinatura digital no mesmo fluxo. Em vez de alternar entre Word,
-                e-mail, ferramenta de assinatura e retrabalho manual, o escritório opera tudo num só lugar.
+                Gere, revise e envie para assinatura em minutos — não em horas. O Lex Revision junta IA jurídica em português,
+                biblioteca de modelos e assinatura digital ICP-Brasil em um fluxo único, sem trocar de ferramenta.
               </p>
 
               <div className="marketing-cta-row">
                 <a href="#precos" className="btn btn-primary btn-lg">
-                  Escolher plano <Icon name="arrow-right" size={16} />
+                  Começar grátis <Icon name="arrow-right" size={16} />
                 </a>
                 <Link href="/login" className="btn btn-secondary btn-lg">
                   Entrar como cliente
@@ -263,9 +263,9 @@ export default function HomePage() {
               <div className="marketing-panel-grid">
                 <div className="row sp-between" style={{ alignItems: "flex-start" }}>
                   <div>
-                    <div className="chip chip-green">Workspace ativo</div>
+                    <div className="chip chip-green">Pronto para usar</div>
                     <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-0.03em", marginTop: 14 }}>
-                      Fluxo jurídico em um cockpit só
+                      Tudo do contrato em um lugar só
                     </div>
                   </div>
                   <div style={{ width: 42, height: 42, borderRadius: 12, background: "var(--accent-soft)", color: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -298,12 +298,12 @@ export default function HomePage() {
                 <div className="card" style={{ padding: 18, background: "linear-gradient(135deg, var(--surface-2), transparent)" }}>
                   <div className="row sp-between" style={{ marginBottom: 12 }}>
                     <div>
-                      <div className="card-title">O que já existe no app</div>
+                      <div className="card-title">O que você ganha no plano</div>
                       <div className="card-sub" style={{ marginBottom: 0 }}>
-                        Dashboard, histórico, IA, modelos, faturamento e fluxo de assinatura
+                        Modelos, IA, revisão, assinatura, histórico e faturamento — tudo incluso
                       </div>
                     </div>
-                    <span className="chip chip-accent">MVP operacional</span>
+                    <span className="chip chip-accent">Disponível agora</span>
                   </div>
 
                   <div style={{ display: "grid", gap: 10 }}>
@@ -325,11 +325,11 @@ export default function HomePage() {
             <div className="marketing-section-head">
               <div>
                 <span className="chip">Produto</span>
-                <h2 className="marketing-section-title">O que o Anty já trouxe para a base atual.</h2>
+                <h2 className="marketing-section-title">Você passa metade do dia caçando contrato no Drive.</h2>
               </div>
               <p className="muted" style={{ fontSize: 14, lineHeight: 1.7, margin: 0 }}>
-                O protótipo foi portado para Next.js e já virou um app navegável. O próximo passo é sair do modo demo e fechar auth,
-                persistência real, billing e webhooks.
+                Cláusula desatualizada. Versão errada enviada pro cliente. Assinatura que demora 3 semanas. Cliente que desiste porque o processo é lento demais.
+                Enquanto isso, seu escritório tenta crescer com o mesmo time.
               </p>
             </div>
 
@@ -351,11 +351,11 @@ export default function HomePage() {
           <section id="fluxo" className="marketing-section">
             <div className="marketing-section-head">
               <div>
-                <span className="chip chip-green">Fluxo</span>
-                <h2 className="marketing-section-title">Venda primeiro. Acesso depois.</h2>
+                <span className="chip chip-green">Como funciona</span>
+                <h2 className="marketing-section-title">Do brief à assinatura, sem trocar de tela.</h2>
               </div>
               <p className="muted" style={{ fontSize: 14, lineHeight: 1.7, margin: 0 }}>
-                O fluxo certo do produto é LP, plano, pagamento, ativação e só então plataforma. O login fica para cliente já ativo.
+                Três passos. Nenhum exporta-importa-cola. O contrato nasce, vive e fecha no mesmo lugar.
               </p>
             </div>
 
@@ -373,18 +373,18 @@ export default function HomePage() {
           <section className="marketing-section" style={{ paddingBottom: 88 }}>
             <div className="marketing-cta-banner">
               <div>
-                <div className="chip chip-amber" style={{ marginBottom: 12 }}>Acesso à plataforma</div>
+                <div className="chip chip-amber" style={{ marginBottom: 12 }}>Comece hoje</div>
                 <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-0.03em", marginBottom: 8 }}>
-                  Cliente existente entra pelo login. Novo cliente entra pelo checkout.
+                  Seu primeiro contrato sai antes do café esfriar.
                 </div>
                 <div className="muted" style={{ fontSize: 14, lineHeight: 1.7, maxWidth: "60ch" }}>
-                  Isso evita inverter aquisição com uso do produto e deixa a narrativa comercial muito mais limpa.
+                  7 dias por nossa conta. Sem cartão de crédito. Cancela em 1 clique se não for pra você.
                 </div>
               </div>
 
               <div className="row" style={{ gap: 10, flexWrap: "wrap" }}>
-                <a href="#precos" className="btn btn-primary">Ir para preços</a>
-                <Link href="/login" className="btn btn-secondary">Login de clientes</Link>
+                <a href="#precos" className="btn btn-primary">Começar grátis</a>
+                <Link href="/login" className="btn btn-secondary">Já sou cliente</Link>
               </div>
             </div>
           </section>

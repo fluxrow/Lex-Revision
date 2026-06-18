@@ -19,39 +19,39 @@ const PLANS: Array<{
     name: "Starter",
     tag: "Solo",
     price: "97",
-    description: "Para advogado ou operação pequena validando o fluxo.",
+    description: "Para advogado autônomo ou banca de até 3 pessoas começando a escalar.",
     features: [
       "20 contratos por mês",
-      "IA para geração e revisão",
+      "IA jurídica em português para gerar e revisar",
       "1 usuário",
-      "Upload e preenchimento de modelos",
+      "Upload de modelos próprios e biblioteca compartilhada",
     ],
   },
   {
     id: "professional",
     name: "Professional",
-    tag: "Mais vendido",
+    tag: "Mais escolhido",
     price: "297",
-    description: "Para escritório com volume recorrente e time operacional.",
+    description: "Para escritório com fluxo constante e time operacional definido.",
     features: [
       "100 contratos por mês",
-      "Assinatura digital integrada",
-      "5 usuários",
-      "Histórico, clientes e faturamento",
+      "Assinatura ICP-Brasil incluída",
+      "Até 5 usuários simultâneos",
+      "Histórico completo, gestão de clientes e faturamento",
     ],
     highlight: true,
   },
   {
     id: "firm",
     name: "Firm",
-    tag: "Escala",
+    tag: "Escritório",
     price: "697",
-    description: "Para equipe maior e operação mais robusta.",
+    description: "Para escritório com 10+ pessoas e operação que não pode parar.",
     features: [
-      "Volume ampliado",
-      "Equipe expandida",
-      "Base operacional completa",
-      "Suporte prioritário",
+      "Contratos ilimitados",
+      "Até 15 usuários simultâneos",
+      "Pasta de jurisprudência inclusa + API para integrar com seu CRM",
+      "Suporte por WhatsApp em até 2h úteis",
     ],
   },
 ];
@@ -110,15 +110,15 @@ export default function PricingSection() {
       <div className="marketing-section-head">
         <div>
           <span className="chip chip-accent">Planos</span>
-          <h2 className="marketing-section-title">Escolha um pacote e avance para o checkout.</h2>
+          <h2 className="marketing-section-title">Planos para cada momento do escritório.</h2>
         </div>
         <div>
           <p className="muted" style={{ fontSize: 14, lineHeight: 1.7, margin: 0 }}>
-            O fluxo principal do Lex fica aqui: a pessoa entende o produto, escolhe o plano, paga via Stripe e depois ativa o acesso.
+            Mensal, sem fidelidade. Comece pelo plano que faz sentido hoje, suba quando o time crescer. Cancela em 1 clique se não for pra você.
           </p>
           <div style={{ marginTop: 14 }}>
             <label className="field-label" style={{ display: "block", marginBottom: 6 }}>
-              E-mail para pre-preencher o checkout
+              Seu e-mail (para já abrir a conta após pagamento)
             </label>
             <input
               className="input"
