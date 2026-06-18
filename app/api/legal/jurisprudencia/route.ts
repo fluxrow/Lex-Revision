@@ -36,7 +36,7 @@ export async function GET(request: Request) {
 
     if (anthropic && results.length > 0) {
       const msg = await anthropic.messages.create({
-        model: "claude-3-5-sonnet-20241022",
+        model: "claude-sonnet-4-6",
         max_tokens: 900,
         system: [
           "Voce trabalha no Lex Revision e deve sintetizar apoio juridico contextual usando apenas referencias curadas ja fornecidas.",

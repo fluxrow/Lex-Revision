@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     }
 
     const msg = await anthropic.messages.create({
-      model: "claude-3-5-sonnet-20241022",
+      model: "claude-sonnet-4-6",
       max_tokens: 2200,
       system: [
         "Voce trabalha dentro do Lex Revision, uma plataforma de automacao de contratos para escritorios no Brasil.",
