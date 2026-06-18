@@ -12,14 +12,30 @@ import {
   retrieveRagTemplates,
   type RagRetrievalResult,
 } from "@/lib/rag/templates";
+import { buildCacheKey, lookupCache, saveCache } from "@/lib/rag/cache";
 
 const generateSchema = z.object({
   prompt: z.string().trim().min(12),
 });
 
+const MODEL = "claude-sonnet-4-6";
+const ROUTE_NS = "generate";
+
 export async function POST(request: Request) {
   try {
     const payload = generateSchema.parse(await request.json());
+
+    // 1) Cache lookup (sai cedo se hit — economia máxima)
+    const cacheKey = buildCacheKey(ROUTE_NS, payload.prompt);
+    const cached = await lookupCache(cacheKey);
+    if (cached.hit) {
+      return NextResponse.json({
+        ...cached.response,
+        provider: "anthropic_rag_cached",
+        cache: cached.meta,
+      });
+    }
+
     const fallback = buildGeneratedContractFallback(payload.prompt);
     const anthropic = getAnthropicClient();
     let rag: RagRetrievalResult | null = null;
@@ -39,6 +55,7 @@ export async function POST(request: Request) {
         status: "generated",
         provider: "fallback",
         rag,
+        cache: { hit: false, cache_key: cacheKey },
         contract: fallback,
         content: fallback.body,
       });
@@ -47,7 +64,7 @@ export async function POST(request: Request) {
     const ragContext = buildRagGenerationContext(rag?.matches ?? []);
 
     const msg = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
+      model: MODEL,
       max_tokens: 2200,
       system: [
         "Voce trabalha dentro do Lex Revision, uma plataforma de automacao de contratos para escritorios no Brasil.",
@@ -68,12 +85,28 @@ export async function POST(request: Request) {
     const rawContent = extractTextContent(msg.content);
     const parsed = parseJsonFromText<GeneratedContractDraft>(rawContent);
 
-    return NextResponse.json({
-      status: "generated",
-      provider: rag?.matches.length ? "anthropic_rag" : "anthropic",
+    const responseBody = {
+      status: "generated" as const,
       rag,
       contract: parsed ?? fallback,
       content: parsed?.body ?? rawContent ?? fallback.body,
+    };
+
+    // 2) Cache save (fire-and-forget — não bloqueia response)
+    void saveCache({
+      cacheKey,
+      queryText: payload.prompt,
+      retrievalTemplateIds: rag?.matches.map((m) => m.id) ?? [],
+      llmResponse: responseBody,
+      llmModel: MODEL,
+      tokensInput: msg.usage?.input_tokens,
+      tokensOutput: msg.usage?.output_tokens,
+    });
+
+    return NextResponse.json({
+      ...responseBody,
+      provider: rag?.matches.length ? "anthropic_rag" : "anthropic",
+      cache: { hit: false, cache_key: cacheKey },
     });
   } catch (error: any) {
     console.error("AI Generate Error:", error);

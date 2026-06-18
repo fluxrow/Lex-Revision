@@ -10,6 +10,7 @@ import {
   retrieveRagTemplates,
   type RagRetrievalResult,
 } from "@/lib/rag/templates";
+import { buildCacheKey, lookupCache, saveCache } from "@/lib/rag/cache";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -17,6 +18,9 @@ const reviewSchema = z.object({
   documentContent: z.string().min(30),
   contractTypeHint: z.string().optional(),
 });
+
+const MODEL = "claude-sonnet-4-6";
+const ROUTE_NS = "review";
 
 /**
  * Constrói a query para retrieval RAG a partir do contrato + hint.
@@ -28,9 +32,32 @@ function buildRagQuery(documentContent: string, contractLabel?: string, hint?: s
   return parts.join(" — ");
 }
 
+/**
+ * Cache key inclui hint + documentContent — duas revisões do mesmo contrato
+ * com hints diferentes devem ser cacheadas separadamente.
+ */
+function buildReviewCacheInput(documentContent: string, hint?: string): string {
+  return `hint=${hint ?? ""}::doc=${documentContent}`;
+}
+
 export async function POST(request: Request) {
   try {
     const payload = reviewSchema.parse(await request.json());
+
+    // 1) Cache lookup
+    const cacheKey = buildCacheKey(
+      ROUTE_NS,
+      buildReviewCacheInput(payload.documentContent, payload.contractTypeHint)
+    );
+    const cached = await lookupCache(cacheKey);
+    if (cached.hit) {
+      return NextResponse.json({
+        ...cached.response,
+        provider: "anthropic_rag_cached",
+        cache: cached.meta,
+      });
+    }
+
     const analysis = analyzeContractDocument(
       payload.documentContent,
       payload.contractTypeHint
@@ -60,6 +87,7 @@ export async function POST(request: Request) {
         provider: "heuristic",
         analysis,
         rag,
+        cache: { hit: false, cache_key: cacheKey },
         review: fallback,
         content: JSON.stringify(fallback, null, 2),
       });
@@ -68,7 +96,7 @@ export async function POST(request: Request) {
     const ragContext = buildRagGenerationContext(rag?.matches ?? []);
 
     const msg = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
+      model: MODEL,
       max_tokens: 1600,
       system: [
         "Voce e um revisor juridico do Lex Revision especializado em contratos brasileiros.",
@@ -91,13 +119,28 @@ export async function POST(request: Request) {
     const rawContent = extractTextContent(msg.content);
     const parsed = parseJsonFromText<typeof fallback>(rawContent);
 
-    return NextResponse.json({
-      status: "reviewed",
-      provider: rag?.matches.length ? "anthropic_rag" : "anthropic",
+    const responseBody = {
+      status: "reviewed" as const,
       analysis,
       rag,
       review: parsed ?? fallback,
       content: rawContent,
+    };
+
+    void saveCache({
+      cacheKey,
+      queryText: buildReviewCacheInput(payload.documentContent, payload.contractTypeHint),
+      retrievalTemplateIds: rag?.matches.map((m) => m.id) ?? [],
+      llmResponse: responseBody,
+      llmModel: MODEL,
+      tokensInput: msg.usage?.input_tokens,
+      tokensOutput: msg.usage?.output_tokens,
+    });
+
+    return NextResponse.json({
+      ...responseBody,
+      provider: rag?.matches.length ? "anthropic_rag" : "anthropic",
+      cache: { hit: false, cache_key: cacheKey },
     });
   } catch (error: any) {
     console.error("AI Review Error:", error);

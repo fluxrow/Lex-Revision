@@ -10,6 +10,7 @@ import {
   retrieveRagTemplates,
   type RagRetrievalResult,
 } from "@/lib/rag/templates";
+import { buildCacheKey, lookupCache, saveCache } from "@/lib/rag/cache";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -18,19 +19,36 @@ const clausesSchema = z.object({
   contractTypeHint: z.string().optional(),
 });
 
-/**
- * Constrói a query para retrieval RAG a partir do contrato + hint.
- * Para clauses, prioriza tipo de contrato + primeiros 500 chars para
- * trazer templates similares que ajudam a identificar cláusulas-padrão.
- */
+const MODEL = "claude-sonnet-4-6";
+const ROUTE_NS = "clauses";
+
 function buildRagQuery(documentContent: string, contractLabel?: string, hint?: string): string {
   const parts = [hint, contractLabel, documentContent.slice(0, 500)].filter(Boolean);
   return parts.join(" — ");
 }
 
+function buildClausesCacheInput(documentContent: string, hint?: string): string {
+  return `hint=${hint ?? ""}::doc=${documentContent}`;
+}
+
 export async function POST(request: Request) {
   try {
     const payload = clausesSchema.parse(await request.json());
+
+    // 1) Cache lookup
+    const cacheKey = buildCacheKey(
+      ROUTE_NS,
+      buildClausesCacheInput(payload.documentContent, payload.contractTypeHint)
+    );
+    const cached = await lookupCache(cacheKey);
+    if (cached.hit) {
+      return NextResponse.json({
+        ...cached.response,
+        provider: "anthropic_rag_cached",
+        cache: cached.meta,
+      });
+    }
+
     const analysis = analyzeContractDocument(
       payload.documentContent,
       payload.contractTypeHint
@@ -60,6 +78,7 @@ export async function POST(request: Request) {
         provider: "heuristic",
         analysis,
         rag,
+        cache: { hit: false, cache_key: cacheKey },
         ...fallback,
         content: JSON.stringify(fallback, null, 2),
       });
@@ -68,7 +87,7 @@ export async function POST(request: Request) {
     const ragContext = buildRagGenerationContext(rag?.matches ?? []);
 
     const msg = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
+      model: MODEL,
       max_tokens: 1600,
       system: [
         "Voce trabalha dentro do Lex Revision e precisa mapear clausulas importantes com base em uma taxonomia juridica.",
@@ -89,14 +108,29 @@ export async function POST(request: Request) {
     const rawContent = extractTextContent(msg.content);
     const parsed = parseJsonFromText<typeof fallback>(rawContent);
 
-    return NextResponse.json({
-      status: "claused",
-      provider: rag?.matches.length ? "anthropic_rag" : "anthropic",
+    const responseBody = {
+      status: "claused" as const,
       analysis,
       rag,
       clauseCoverage: parsed?.clauseCoverage ?? fallback.clauseCoverage,
       suggestedClauses: parsed?.suggestedClauses ?? fallback.suggestedClauses,
       content: rawContent,
+    };
+
+    void saveCache({
+      cacheKey,
+      queryText: buildClausesCacheInput(payload.documentContent, payload.contractTypeHint),
+      retrievalTemplateIds: rag?.matches.map((m) => m.id) ?? [],
+      llmResponse: responseBody,
+      llmModel: MODEL,
+      tokensInput: msg.usage?.input_tokens,
+      tokensOutput: msg.usage?.output_tokens,
+    });
+
+    return NextResponse.json({
+      ...responseBody,
+      provider: rag?.matches.length ? "anthropic_rag" : "anthropic",
+      cache: { hit: false, cache_key: cacheKey },
     });
   } catch (error: any) {
     console.error("AI Clauses Error:", error);
