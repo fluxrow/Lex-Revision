@@ -34,7 +34,9 @@ export async function POST(request: Request) {
     const normalizedPlan = normalizePlan(selectedPlan) ?? "starter";
 
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
+      // payment_method_types removed (Stripe best practice 2026-04-22):
+      // omitting this enables dynamic payment methods — Stripe Dashboard
+      // controls which methods (Pix, Boleto, Card, etc.) appear by region.
       line_items: [
         {
           price: priceId,
