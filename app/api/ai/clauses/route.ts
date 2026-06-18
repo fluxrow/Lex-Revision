@@ -10,6 +10,11 @@ import {
   retrieveRagTemplates,
   type RagRetrievalResult,
 } from "@/lib/rag/templates";
+import {
+  buildRagClausesContext,
+  retrieveRagClauses,
+  type RagClauseRetrievalResult,
+} from "@/lib/rag/clauses";
 import { buildCacheKey, lookupCache, saveCache } from "@/lib/rag/cache";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -29,6 +34,21 @@ function buildRagQuery(documentContent: string, contractLabel?: string, hint?: s
 
 function buildClausesCacheInput(documentContent: string, hint?: string): string {
   return `hint=${hint ?? ""}::doc=${documentContent}`;
+}
+
+/**
+ * Determina a tag de provider mais específica possível, considerando os dois
+ * tipos de retrieval (template estrutural + cláusulas granulares).
+ */
+function deriveProviderTag(
+  ragTemplates: RagRetrievalResult | null,
+  ragClauses: RagClauseRetrievalResult | null
+): string {
+  const hasClauses = (ragClauses?.matches.length ?? 0) > 0;
+  const hasTemplates = (ragTemplates?.matches.length ?? 0) > 0;
+  if (hasClauses) return "anthropic_rag_clauses";
+  if (hasTemplates) return "anthropic_rag";
+  return "anthropic";
 }
 
 export async function POST(request: Request) {
@@ -55,47 +75,59 @@ export async function POST(request: Request) {
     );
     const fallback = buildClauseSuggestionsFallback(analysis);
     const anthropic = getAnthropicClient();
-    let rag: RagRetrievalResult | null = null;
 
-    try {
-      const ragQuery = buildRagQuery(
-        payload.documentContent,
-        analysis.contractLabel,
-        payload.contractTypeHint
-      );
-      rag = await retrieveRagTemplates({
-        query: ragQuery,
-        k: 3,
-        threshold: 0.38,
-      });
-    } catch (ragError: any) {
-      console.warn("RAG retrieval skipped (clauses):", ragError.message);
-    }
+    // 2) Dois retrievals em paralelo: templates (contexto estrutural) +
+    //    cláusulas (granular para detecção de faltantes)
+    let ragTemplates: RagRetrievalResult | null = null;
+    let ragClauses: RagClauseRetrievalResult | null = null;
+
+    const ragQuery = buildRagQuery(
+      payload.documentContent,
+      analysis.contractLabel,
+      payload.contractTypeHint
+    );
+
+    const [tmplResult, clauseResult] = await Promise.allSettled([
+      retrieveRagTemplates({ query: ragQuery, k: 2, threshold: 0.38 }),
+      retrieveRagClauses({ query: ragQuery, k: 8, threshold: 0.32 }),
+    ]);
+
+    if (tmplResult.status === "fulfilled") ragTemplates = tmplResult.value;
+    else console.warn("RAG templates skipped (clauses):", tmplResult.reason?.message);
+
+    if (clauseResult.status === "fulfilled") ragClauses = clauseResult.value;
+    else console.warn("RAG clauses skipped:", clauseResult.reason?.message);
 
     if (!anthropic) {
       return NextResponse.json({
         status: "claused",
         provider: "heuristic",
         analysis,
-        rag,
+        rag: ragTemplates,
+        ragClauses,
         cache: { hit: false, cache_key: cacheKey },
         ...fallback,
         content: JSON.stringify(fallback, null, 2),
       });
     }
 
-    const ragContext = buildRagGenerationContext(rag?.matches ?? []);
+    const templateContext = buildRagGenerationContext(ragTemplates?.matches ?? []);
+    const clausesContext = buildRagClausesContext(ragClauses?.matches ?? []);
 
     const msg = await anthropic.messages.create({
       model: MODEL,
       max_tokens: 1600,
       system: [
         "Voce trabalha dentro do Lex Revision e precisa mapear clausulas importantes com base em uma taxonomia juridica.",
-        "Use o contexto RAG (templates similares da biblioteca Lex Revision) APENAS para identificar quais clausulas costumam aparecer em contratos do mesmo tipo — nunca copie literalmente.",
+        "Use o contexto RAG abaixo para identificar quais clausulas costumam aparecer em contratos do mesmo tipo, qual e a base legal de cada uma e o risco de ausencia. Nunca copie textos literalmente.",
+        "Quando uma clausula da biblioteca aparecer no contexto e nao estiver presente no contrato analisado, marque-a como missing com a importance correspondente (required para risco alto, recommended para medio/baixo).",
         "Responda somente JSON valido no formato:",
         '{"clauseCoverage":[{"id":"...","title":"...","status":"present|missing_required|missing_recommended","importance":"required|recommended","riskIfMissing":"low|medium|high","guidance":"...","sampleText":"..."}],"suggestedClauses":[{"id":"...","title":"...","priority":"low|medium|high","motivo":"...","text":"..."}]}',
         buildKnowledgeBaseContext(analysis),
-        ragContext || "Nenhum contexto RAG forte foi recuperado para este contrato. Use apenas a taxonomia juridica padrao.",
+        templateContext ||
+          "Nenhum template estrutural similar foi recuperado.",
+        clausesContext ||
+          "Nenhuma clausula granular foi recuperada — use apenas a taxonomia juridica padrao.",
       ].join("\n\n"),
       messages: [
         {
@@ -111,7 +143,8 @@ export async function POST(request: Request) {
     const responseBody = {
       status: "claused" as const,
       analysis,
-      rag,
+      rag: ragTemplates,
+      ragClauses,
       clauseCoverage: parsed?.clauseCoverage ?? fallback.clauseCoverage,
       suggestedClauses: parsed?.suggestedClauses ?? fallback.suggestedClauses,
       content: rawContent,
@@ -121,7 +154,10 @@ export async function POST(request: Request) {
     await saveCache({
       cacheKey,
       queryText: buildClausesCacheInput(payload.documentContent, payload.contractTypeHint),
-      retrievalTemplateIds: rag?.matches.map((m) => m.id) ?? [],
+      retrievalTemplateIds: [
+        ...(ragTemplates?.matches.map((m) => m.id) ?? []),
+        ...(ragClauses?.matches.map((m) => m.id) ?? []),
+      ],
       llmResponse: responseBody,
       llmModel: MODEL,
       tokensInput: msg.usage?.input_tokens,
@@ -130,7 +166,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       ...responseBody,
-      provider: rag?.matches.length ? "anthropic_rag" : "anthropic",
+      provider: deriveProviderTag(ragTemplates, ragClauses),
       cache: { hit: false, cache_key: cacheKey },
     });
   } catch (error: any) {
