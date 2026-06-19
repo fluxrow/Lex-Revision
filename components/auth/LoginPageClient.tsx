@@ -33,6 +33,7 @@ export default function LoginPageClient({
 
   const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -290,26 +291,63 @@ export default function LoginPageClient({
           />
         </div>
         <div className="field">
-          <label className="field-label">
-            Senha{" "}
+          <div
+            className="row"
+            style={{
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 6,
+            }}
+          >
+            <label className="field-label" style={{ marginBottom: 0 }}>
+              Senha
+            </label>
             <Link
               href="/recuperar-senha"
               style={{
-                float: "right",
                 color: "var(--accent)",
                 fontWeight: 500,
+                fontSize: 13,
               }}
             >
               Esqueci minha senha
             </Link>
-          </label>
-          <input
-            className="input"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            disabled={loading}
-          />
+          </div>
+          <div style={{ position: "relative" }}>
+            <input
+              className="input"
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={loading}
+              style={{ paddingRight: 46 }}
+            />
+            <button
+              type="button"
+              aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+              title={showPassword ? "Ocultar senha" : "Mostrar senha"}
+              onClick={() => setShowPassword((current) => !current)}
+              disabled={loading}
+              style={{
+                position: "absolute",
+                right: 8,
+                top: "50%",
+                transform: "translateY(-50%)",
+                width: 32,
+                height: 32,
+                border: 0,
+                borderRadius: 8,
+                background: "transparent",
+                color: "var(--text-muted)",
+                cursor: loading ? "not-allowed" : "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Icon name={showPassword ? "eye-off" : "eye"} size={16} />
+            </button>
+          </div>
         </div>
         {error && (
           <div
