@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import CookieConsent from "@/components/legal/CookieConsent";
 import "./globals.css";
 
 const inter = Inter({
@@ -36,6 +37,7 @@ export default function RootLayout({
     <html lang="pt-BR" className={`${inter.variable} ${jetbrainsMono.variable}`} data-theme="dark">
       <body>
         {children}
+        <CookieConsent />
       </body>
     </html>
   );

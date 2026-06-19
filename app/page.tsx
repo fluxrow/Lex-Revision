@@ -407,16 +407,21 @@ export default function HomePage() {
                 gap: 16,
               }}
             >
-              <div className="row" style={{ gap: 12, alignItems: "center" }}>
-                <div className="sidebar-logo" style={{ padding: 0 }}>
-                  <div className="sidebar-logo-mark">L</div>
-                  <div className="sidebar-logo-text">
-                    Lex<span className="legal"> Revision</span>
+              <div className="col" style={{ gap: 6 }}>
+                <div className="row" style={{ gap: 12, alignItems: "center" }}>
+                  <div className="sidebar-logo" style={{ padding: 0 }}>
+                    <div className="sidebar-logo-mark">L</div>
+                    <div className="sidebar-logo-text">
+                      Lex<span className="legal"> Revision</span>
+                    </div>
                   </div>
+                  <span className="muted" style={{ fontSize: 12 }}>
+                    © 2026 Lex Revision®
+                  </span>
                 </div>
-                <span className="muted" style={{ fontSize: 12 }}>
-                  © 2026 Lex Revision®
-                </span>
+                <div className="muted" style={{ fontSize: 11, opacity: 0.7 }}>
+                  Fluxrow Inteligência Criativa Ltda. · CNPJ [CNPJ_FLUXROW_PLACEHOLDER]
+                </div>
               </div>
 
               <div className="row" style={{ gap: 18, flexWrap: "wrap" }}>
