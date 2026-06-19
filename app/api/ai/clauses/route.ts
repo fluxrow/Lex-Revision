@@ -17,6 +17,7 @@ import {
 } from "@/lib/rag/clauses";
 import { buildCacheKey, lookupCache, saveCache } from "@/lib/rag/cache";
 import { NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { z } from "zod";
 
 const clausesSchema = z.object({
@@ -173,6 +174,7 @@ export async function POST(request: Request) {
     });
   } catch (error: any) {
     console.error("AI Clauses Error:", error);
+    Sentry.captureException(error, { tags: { route: "ai/clauses" } });
     return NextResponse.json(
       { error: error.message || "Failed to analyze clauses" },
       { status: 500 }

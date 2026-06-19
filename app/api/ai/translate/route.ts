@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { NextResponse } from 'next/server';
+import * as Sentry from "@sentry/nextjs";
 
 export async function POST(request: Request) {
   try {
@@ -26,6 +27,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ content, status: 'translated' });
   } catch (error: any) {
     console.error("AI Translate Error:", error);
+    Sentry.captureException(error, { tags: { route: "ai/translate" } });
     return NextResponse.json({ error: error.message || "Failed to translate text" }, { status: 500 });
   }
 }

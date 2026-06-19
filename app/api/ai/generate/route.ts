@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { z } from "zod";
 
 import { getAnthropicClient } from "@/lib/ai/client";
@@ -112,6 +113,7 @@ export async function POST(request: Request) {
     });
   } catch (error: any) {
     console.error("AI Generate Error:", error);
+    Sentry.captureException(error, { tags: { route: "ai/generate" } });
     return NextResponse.json(
       { error: error.message || "Failed to generate text" },
       { status: 500 }
