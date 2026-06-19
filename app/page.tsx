@@ -1,5 +1,6 @@
 import PricingSection from "@/components/marketing/PricingSection";
 import Icon from "@/components/ui/Icon";
+import { fluxrowBranding } from "@/lib/legal/branding";
 import Link from "next/link";
 
 const highlights = [
@@ -420,7 +421,7 @@ export default function HomePage() {
                   </span>
                 </div>
                 <div className="muted" style={{ fontSize: 11, opacity: 0.7 }}>
-                  Fluxrow Inteligência Criativa Ltda. · CNPJ [CNPJ_FLUXROW_PLACEHOLDER]
+                  {fluxrowBranding.legalName} · CNPJ {fluxrowBranding.cnpj}
                 </div>
               </div>
 

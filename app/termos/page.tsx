@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { fluxrowBranding } from "@/lib/legal/branding";
 
 export const metadata = {
   title: "Termos de Uso — Lex Revision",
@@ -20,10 +21,11 @@ export default function TermsPage() {
         <div className="card" style={{ lineHeight: 1.7 }}>
           <h2 style={{ fontSize: 22, marginTop: 0 }}>1. Quem é a operadora</h2>
           <p>
-            O Lex Revision é operado pela{" "}
-            <strong>Fluxrow Inteligência Criativa Ltda.</strong> ("Fluxrow"), inscrita no CNPJ{" "}
-            <span className="mono">[CNPJ_FLUXROW_PLACEHOLDER]</span>, com sede no Brasil. Ao
-            acessar ou usar a plataforma, você concorda com estes Termos.
+            O Lex Revision é operado pela <strong>{fluxrowBranding.legalName}</strong>{" "}
+            ("Fluxrow"), inscrita no CNPJ{" "}
+            <span className="mono">{fluxrowBranding.cnpj}</span>, com sede em{" "}
+            {fluxrowBranding.address}. Ao acessar ou usar a plataforma, você concorda com
+            estes Termos.
           </p>
 
           <h2 style={{ fontSize: 22 }}>2. O que é o serviço</h2>
@@ -138,9 +140,13 @@ export default function TermsPage() {
 
           <h2 style={{ fontSize: 22 }}>14. Contato</h2>
           <p>
-            Suporte: <a href="mailto:suporte@fluxrow.com">suporte@fluxrow.com</a>
+            Suporte:{" "}
+            <a href={`mailto:${fluxrowBranding.supportEmail}`}>
+              {fluxrowBranding.supportEmail}
+            </a>
             <br />
-            Jurídico: <a href="mailto:juridico@fluxrow.com">juridico@fluxrow.com</a>
+            Jurídico:{" "}
+            <a href={`mailto:${fluxrowBranding.legalEmail}`}>{fluxrowBranding.legalEmail}</a>
           </p>
         </div>
 

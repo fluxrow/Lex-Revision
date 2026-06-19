@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { fluxrowBranding } from "@/lib/legal/branding";
 
 export const metadata = {
   title: "Política de Privacidade — Lex Revision",
@@ -21,9 +22,10 @@ export default function PrivacyPage() {
           <h2 style={{ fontSize: 22, marginTop: 0 }}>1. Quem somos</h2>
           <p>
             O Lex Revision é uma plataforma operada pela{" "}
-            <strong>Fluxrow Inteligência Criativa Ltda.</strong>, inscrita no CNPJ{" "}
-            <span className="mono">[CNPJ_FLUXROW_PLACEHOLDER]</span>, com sede no Brasil. Esta
-            Política descreve como tratamos dados pessoais nos termos da Lei nº 13.709/2018 (LGPD).
+            <strong>{fluxrowBranding.legalName}</strong>, inscrita no CNPJ{" "}
+            <span className="mono">{fluxrowBranding.cnpj}</span>, com sede em{" "}
+            {fluxrowBranding.address}. Esta Política descreve como tratamos dados pessoais
+            nos termos da Lei nº 13.709/2018 (LGPD).
           </p>
 
           <h2 style={{ fontSize: 22 }}>2. Quais dados coletamos</h2>
@@ -134,10 +136,12 @@ export default function PrivacyPage() {
           <h2 style={{ fontSize: 22 }}>13. Contato</h2>
           <p>
             Encarregado pelo Tratamento de Dados (DPO):{" "}
-            <a href="mailto:dpo@fluxrow.com">dpo@fluxrow.com</a>
+            <a href={`mailto:${fluxrowBranding.dpoEmail}`}>{fluxrowBranding.dpoEmail}</a>
             <br />
             Para outras questões:{" "}
-            <a href="mailto:privacidade@fluxrow.com">privacidade@fluxrow.com</a>
+            <a href={`mailto:${fluxrowBranding.privacyEmail}`}>
+              {fluxrowBranding.privacyEmail}
+            </a>
           </p>
         </div>
 
