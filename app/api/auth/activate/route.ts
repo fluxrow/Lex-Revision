@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { z } from "zod";
 
 import {
@@ -142,6 +143,7 @@ export async function POST(request: Request) {
     });
   } catch (error: any) {
     console.error("Activation Error:", error);
+    Sentry.captureException(error, { tags: { route: "auth/activate" } });
     return NextResponse.json(
       { error: error.message || "Nao foi possivel ativar o acesso." },
       { status: 500 }

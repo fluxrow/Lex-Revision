@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { z } from "zod";
 
 import { findUserByEmail } from "@/lib/billing/stripe-sync";
@@ -190,6 +191,7 @@ export async function POST(request: Request) {
     }
   } catch (error: any) {
     console.error("Voucher Redemption Error:", error);
+    Sentry.captureException(error, { tags: { route: "auth/redeem-voucher" } });
     return NextResponse.json(
       { error: error.message || "Nao foi possivel liberar o acesso por voucher." },
       { status: 500 }

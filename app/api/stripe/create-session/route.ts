@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { z } from "zod";
 
 import { getPriceIdFromPlan, getPlanFromPriceId, normalizePlan } from "@/lib/billing/plans";
@@ -63,6 +64,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ sessionId: session.id, url: session.url });
   } catch (error: any) {
     console.error("Stripe Checkout Error:", error);
+    Sentry.captureException(error, { tags: { route: "stripe/create-session" } });
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

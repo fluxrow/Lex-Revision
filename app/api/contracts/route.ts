@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { z } from "zod";
 
 import { buildContractIntelligence } from "@/lib/contracts/ingestion";
@@ -183,6 +184,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 503 });
     }
 
+    Sentry.captureException(error, { tags: { route: "contracts" } });
     return NextResponse.json(
       { error: error.message || "Nao foi possivel salvar o contrato." },
       { status: 400 }

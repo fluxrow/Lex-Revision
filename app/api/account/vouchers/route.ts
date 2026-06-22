@@ -1,6 +1,7 @@
 import { randomBytes } from "crypto";
 
 import { NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { type SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
@@ -101,6 +102,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 503 });
     }
 
+    Sentry.captureException(error, { tags: { route: "account/vouchers" } });
     return NextResponse.json(
       { error: error.message || "Nao foi possivel emitir o voucher." },
       { status: 400 }

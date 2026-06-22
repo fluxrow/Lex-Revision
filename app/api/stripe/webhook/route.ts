@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import Stripe from "stripe";
 
 import {
@@ -118,6 +119,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ received: true }, { status: 200 });
   } catch (error: any) {
     console.error(`Webhook Error: ${error.message}`);
+    Sentry.captureException(error, { tags: { route: "stripe/webhook" } });
     return NextResponse.json({ error: "Webhook Error" }, { status: 400 });
   }
 }
