@@ -218,6 +218,7 @@ export default function HomePage() {
               <a href="#produto">Produto</a>
               <a href="#precos">Preços</a>
               <a href="#fluxo">Fluxo</a>
+              <a href="#faq">Dúvidas</a>
             </div>
 
             <div className="row" style={{ gap: 10 }}>
@@ -367,6 +368,70 @@ export default function HomePage() {
                   <div className="card-title" style={{ fontSize: 18, marginBottom: 8 }}>{step.title}</div>
                   <div className="muted" style={{ fontSize: 14, lineHeight: 1.7 }}>{step.body}</div>
                 </article>
+              ))}
+            </div>
+          </section>
+
+          <section id="faq" className="marketing-section" style={{ paddingBottom: 24 }}>
+            <div className="chip chip-amber" style={{ marginBottom: 12 }}>Dúvidas comuns</div>
+            <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-0.03em", marginBottom: 24 }}>
+              O que advogados perguntam antes de testar.
+            </div>
+
+            <div className="col" style={{ gap: 12, maxWidth: 760 }}>
+              {[
+                {
+                  q: "Vocês usam meus contratos pra treinar IA?",
+                  a: "Não. Conteúdo do cliente nunca é usado para treinar modelos. É contratual com Anthropic e Voyage AI, e está explícito no nosso Termo de Uso da IA.",
+                },
+                {
+                  q: "Posso cancelar quando quiser?",
+                  a: "Sim, em 1 clique pelo portal Stripe dentro de /faturamento. Sem fidelidade. Sem ligar pra ninguém.",
+                },
+                {
+                  q: "Meus contratos ficam isolados dos outros escritórios?",
+                  a: "Sim. RLS (Row Level Security) do Postgres + organização por workspace. Outros usuários da plataforma não conseguem ver, ler ou listar nada do seu workspace.",
+                },
+                {
+                  q: "Tem validade jurídica no Brasil?",
+                  a: "Os modelos foram curados com base na legislação brasileira (CC/2002, CLT, Lei do Inquilinato, Lei das S/A, CDC, LGPD). Assinatura eletrônica via Clicksign tem validade equivalente à ICP-Brasil pelo MP 2.200-2.",
+                },
+                {
+                  q: "Preciso ter o contrato em Word ou PDF pronto?",
+                  a: "Não. Você pode (1) gerar um do zero descrevendo em linguagem natural, (2) escolher um modelo pré-pronto, ou (3) subir um PDF / DOC / DOCX de até 25MB pra revisão.",
+                },
+                {
+                  q: "Quanto custa?",
+                  a: "Starter R$ 97/mês (advogado solo), Professional R$ 197/mês (banca pequena), Firm R$ 397/mês (escritório). 7 dias grátis sem cartão.",
+                },
+                {
+                  q: "Preciso instalar algo?",
+                  a: "Não. 100% web, roda em qualquer navegador moderno. Sem plugin Word, sem app pra baixar.",
+                },
+              ].map(({ q, a }) => (
+                <details
+                  key={q}
+                  style={{
+                    border: "1px solid var(--border)",
+                    borderRadius: 12,
+                    padding: "14px 18px",
+                    background: "var(--card)",
+                  }}
+                >
+                  <summary
+                    style={{
+                      cursor: "pointer",
+                      fontWeight: 600,
+                      fontSize: 15,
+                      listStyle: "none",
+                    }}
+                  >
+                    {q}
+                  </summary>
+                  <div className="muted" style={{ fontSize: 14, lineHeight: 1.7, marginTop: 12 }}>
+                    {a}
+                  </div>
+                </details>
               ))}
             </div>
           </section>
